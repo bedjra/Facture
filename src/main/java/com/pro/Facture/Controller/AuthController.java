@@ -28,14 +28,14 @@ public class AuthController {
     private final UtilisateurRepository utilisateurRepository;
 
     // 🔹 Inscription
-    @PostMapping("/register")
+    @PostMapping("/save")
     public UtilisateurDto register(@RequestBody UtilisateurCreateDto dto) {
         return authService.register(dto);
     }
 
     // 🔹 Login
     @PostMapping("/login")
-    public AuthResponseDto login(@RequestBody AuthRequestDto dto) {
+    public String login(@RequestBody AuthRequestDto dto) {
         // Vérifie si l'utilisateur existe
         Utilisateur utilisateur = utilisateurRepository.findByEmail(dto.getEmail())
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
@@ -46,8 +46,7 @@ public class AuthController {
         }
 
         // Génère le token JWT
-        String token = jwtService.generateToken(utilisateur);
-
-        return new AuthResponseDto(token);
+        return jwtService.generateToken(utilisateur);
     }
+
 }
