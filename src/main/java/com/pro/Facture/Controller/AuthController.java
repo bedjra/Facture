@@ -36,17 +36,15 @@ public class AuthController {
     // 🔹 Login
     @PostMapping("/login")
     public String login(@RequestBody AuthRequestDto dto) {
-        // Vérifie si l'utilisateur existe
         Utilisateur utilisateur = utilisateurRepository.findByEmail(dto.getEmail())
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
 
-        // Vérifie le mot de passe
         if (!passwordEncoder.matches(dto.getPassword(), utilisateur.getPassword())) {
             throw new RuntimeException("Mot de passe incorrect");
         }
 
-        // Génère le token JWT
         return jwtService.generateToken(utilisateur);
     }
+
 
 }
