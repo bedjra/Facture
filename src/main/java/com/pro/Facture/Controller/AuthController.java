@@ -77,4 +77,11 @@ public class AuthController {
     }
 
 
+    // 🔹 Supprimer un utilisateur par ID
+    @DeleteMapping("/{id}")
+    public String deleteUser(@PathVariable Long id) {
+        authService.deleteUser(id);
+        return "Utilisateur supprimé avec succès !";
+    }
+
 }

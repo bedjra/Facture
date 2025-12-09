@@ -59,5 +59,11 @@ public class AuthService {
         dto.setEmail(utilisateur.getEmail());
         dto.setRole(utilisateur.getRole());
         return dto;
+
     }
+
+    public void deleteUser(Long id) {
+        utilisateurRepository.deleteById(id);
+    }
+
 }

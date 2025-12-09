@@ -17,21 +17,24 @@ public class Place {
     private String adresse;
     @Column(name = "description")
     private String desc;
-
+    // 🔥 Nouveau champ TVA (18% par défaut)
+    private Double tva = 18.0;
 
     public Place() {}
 
-    public Place(String nom, byte[]  logo, String email, String telephone, String cel, String adresse, String desc) {
+    public Place(String nom, byte[] logo, String email, String telephone, String cel, String adresse, String desc) {
         this.nom = nom;
         this.logo = logo;
         this.email = email;
         this.telephone = telephone;
-        this.cel =cel;
+        this.cel = cel;
         this.adresse = adresse;
         this.desc = desc;
+        this.tva = 18.0;  // Valeur par défaut
     }
 
-    // Getters / Setters
+
+      // Getters / Setters
 
 
     public String getCel() {
@@ -99,5 +102,11 @@ public class Place {
         this.adresse = adresse;
     }
 
+    public Double getTva() {
+        return tva;
+    }
 
+    public void setTva(Double tva) {
+        this.tva = tva;
+    }
 }
