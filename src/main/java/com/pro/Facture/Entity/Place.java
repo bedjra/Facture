@@ -15,6 +15,7 @@ public class Place {
     private String telephone;
     private String cel;
     private String adresse;
+    @Column(name = "description")
     private String desc;
 
 

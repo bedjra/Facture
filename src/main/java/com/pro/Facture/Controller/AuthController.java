@@ -2,8 +2,7 @@ package com.pro.Facture.Controller;
 
 
 import com.pro.Facture.Dto.AuthRequestDto;
-import com.pro.Facture.Dto.AuthResponseDto;
-import com.pro.Facture.Dto.UtilisateurCreateDto;
+ import com.pro.Facture.Dto.UtilisateurCreateDto;
 import com.pro.Facture.Dto.UtilisateurDto;
 import com.pro.Facture.Entity.Utilisateur;
 import com.pro.Facture.repository.UtilisateurRepository;
@@ -44,6 +43,29 @@ public class AuthController {
         }
 
         return jwtService.generateToken(utilisateur);
+    }
+
+
+    @GetMapping("/info")
+    public UtilisateurCreateDto getUserInfo(@RequestHeader("Authorization") String authHeader) {
+
+        // Enlever "Bearer "
+        String token = authHeader.substring(7);
+
+        // Extraire l'email depuis le token
+        String email = jwtService.extractEmail(token);
+
+        // Récupérer l'utilisateur dans la base
+        Utilisateur utilisateur = utilisateurRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+        // On remplit ton DTO
+        UtilisateurCreateDto dto = new UtilisateurCreateDto();
+        dto.setEmail(utilisateur.getEmail());
+        dto.setRole(utilisateur.getRole());
+        dto.setPassword(null); // jamais envoyer le mot de passe
+
+        return dto;
     }
 
 
