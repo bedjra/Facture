@@ -14,6 +14,8 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/auth")
 @Tag(name = "Auth")
@@ -66,6 +68,12 @@ public class AuthController {
         dto.setPassword(null); // jamais envoyer le mot de passe
 
         return dto;
+    }
+
+    // 🔹 Récupérer tous les utilisateurs
+    @GetMapping("/all")
+    public List<UtilisateurDto> getAllUsers() {
+        return authService.getAll();
     }
 
 
