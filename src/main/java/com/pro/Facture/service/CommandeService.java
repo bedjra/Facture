@@ -109,4 +109,59 @@ public class CommandeService {
         c.setAdresse(client.getAdresse());
         return c;
     }
+
+
+    // ----------------------------
+// GET ALL COMMANDES
+// ----------------------------
+    public List<CommandeResponseDto> getAll() {
+        return commandeRepository.findAll()
+                .stream()
+                .map(this::mapCommandeToDto)
+                .collect(Collectors.toList());
+    }
+
+    // ----------------------------
+// GET ONE COMMAND BY ID
+// ----------------------------
+    public CommandeResponseDto getById(Long id) {
+        Commande cmd = commandeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Commande introuvable"));
+
+        return mapCommandeToDto(cmd);
+    }
+
+    // ----------------------------
+// DELETE COMMAND BY ID
+// ----------------------------
+    public void deleteById(Long id) {
+        if (!commandeRepository.existsById(id)) {
+            throw new RuntimeException("Commande introuvable");
+        }
+        commandeRepository.deleteById(id);
+    }
+
+
+    private CommandeResponseDto mapCommandeToDto(Commande cmd) {
+
+        CommandeResponseDto dto = new CommandeResponseDto();
+
+        dto.setRef(cmd.getRef());
+        dto.setDateFacture(cmd.getDateFacture());
+        dto.setTotalBaseHT(cmd.getHt());
+        dto.setTotalRetenue(cmd.getRetenue());
+        dto.setTotalHTNet(cmd.getMt());
+        dto.setTotalTva(cmd.getTva());
+        dto.setTotalTTC(cmd.getMtTtc());
+        dto.setTotalAvance(cmd.getAvance());
+        dto.setTotalNetAPayer(cmd.getNet());
+
+        // client
+        if (cmd.getClient() != null) {
+            dto.setClient(mapClient(cmd.getClient()));
+        }
+
+        return dto;
+    }
+
 }

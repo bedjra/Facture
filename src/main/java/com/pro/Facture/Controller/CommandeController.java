@@ -11,6 +11,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/commande")
 public class CommandeController {
@@ -28,18 +30,9 @@ public class CommandeController {
     }
 
     // ----------------------------
-    // POST - CREER UNE COMMANDE
-    // ----------------------------
-    @PostMapping
-    public ResponseEntity<CommandeResponseDto> createCommande(@RequestBody CommandeRequestDto dto) {
-        CommandeResponseDto response = commandeService.createCommande(dto);
-        return ResponseEntity.ok(response);
-    }
-
-    // ----------------------------
     // POST - GENERER FACTURE PDF
     // ----------------------------
-    @PostMapping("/pdf")
+    @PostMapping
     public ResponseEntity<byte[]> generatePdf(@RequestBody CommandeRequestDto dto) {
 
         CommandeResponseDto saved = commandeService.createCommande(dto);
@@ -51,6 +44,25 @@ public class CommandeController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=facture.pdf")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
+    }
+
+    // GET ALL
+    @GetMapping
+    public List<CommandeResponseDto> getAll() {
+        return commandeService.getAll();
+    }
+
+    // GET BY ID
+    @GetMapping("/{id}")
+    public CommandeResponseDto getById(@PathVariable Long id) {
+        return commandeService.getById(id);
+    }
+
+    // DELETE
+    @DeleteMapping("/{id}")
+    public String delete(@PathVariable Long id) {
+        commandeService.deleteById(id);
+        return "Commande supprimée avec succès";
     }
 
 }

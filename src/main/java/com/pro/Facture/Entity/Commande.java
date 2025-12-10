@@ -2,12 +2,19 @@ package com.pro.Facture.Entity;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDate;
+
 @Entity
 public class Commande {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "client_id")
+    private Client client;
+
 
     // 🔗 Place → pour récupérer TVA automatiquement
     @ManyToOne
@@ -28,6 +35,9 @@ public class Commande {
     private Double mtTtc;   // ht + (ht * tva/100)
     private Double avance;
     private Double net;     // mtTtc - avance
+
+    private LocalDate dateFacture;
+
 
     public Commande() {}
 
@@ -136,5 +146,22 @@ public class Commande {
 
     public void setNet(Double net) {
         this.net = net;
+    }
+
+
+    public LocalDate getDateFacture() {
+        return dateFacture;
+    }
+
+    public void setDateFacture(LocalDate dateFacture) {
+        this.dateFacture = dateFacture;
+    }
+
+    public Client getClient() {
+        return client;
+    }
+
+    public void setClient(Client client) {
+        this.client = client;
     }
 }
