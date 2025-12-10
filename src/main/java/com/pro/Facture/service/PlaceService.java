@@ -12,6 +12,12 @@ public class PlaceService {
 
     private final PlaceRepository placeRepository;
 
+    // Récupérer la dernière place enregistrée (ou la seule)
+    public Place getCurrent() {
+        return placeRepository.findFirstByOrderByIdAsc()
+                .orElseThrow(() -> new RuntimeException("Place non trouvée"));
+    }
+
     public PlaceService(PlaceRepository placeRepository) {
         this.placeRepository = placeRepository;
     }
@@ -59,4 +65,6 @@ public class PlaceService {
     public void deletePlace(Long id) {
         placeRepository.deleteById(id);
     }
+
+
 }
