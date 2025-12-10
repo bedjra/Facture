@@ -35,7 +35,7 @@ public class ClientDto {
     public void setNom(String nom) { this.nom = nom; }
 
     public String getNIF() { return NIF; }
-    public void setNIF(String NIF) { this.NIF = NIF; }
+    public void setNif(String NIF) { this.NIF = NIF; }
 
     public String getTelephone() { return telephone; }
     public void setTelephone(String telephone) { this.telephone = telephone; }
@@ -48,5 +48,6 @@ public class ClientDto {
 
     public LocalDateTime getDate() { return date; }
     public void setDate(LocalDateTime date) { this.date = date; }
+
 }
 

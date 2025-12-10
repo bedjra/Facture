@@ -1,62 +1,112 @@
 package com.pro.Facture.service;
 
+import com.pro.Facture.Dto.ClientDto;
+import com.pro.Facture.Dto.CommandeRequestDto;
+import com.pro.Facture.Dto.CommandeResponseDto;
+import com.pro.Facture.Dto.LigneCommandeResponseDto;
+import com.pro.Facture.Entity.Client;
 import com.pro.Facture.Entity.Commande;
-import com.pro.Facture.Entity.Place;
+import com.pro.Facture.repository.ClientRepository;
 import com.pro.Facture.repository.CommandeRepository;
-import com.pro.Facture.repository.PlaceRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class CommandeService {
 
-    @Autowired
-    private CommandeRepository commandeRepository;
+    private final CommandeRepository commandeRepository;
+    private final ClientRepository clientRepository;
 
-    @Autowired
-    private PlaceRepository placeRepository;
-
-    // 🔥 Générer ref automatique 0001, 0002, 0003...
-    private String generateRef() {
-        Long count = commandeRepository.count() + 1;
-        return String.format("%04d", count); // 0001, 0002, ...
+    public CommandeService(CommandeRepository commandeRepository, ClientRepository clientRepository) {
+        this.commandeRepository = commandeRepository;
+        this.clientRepository = clientRepository;
     }
 
-    public Commande createCommande(Commande dto, Long placeId) {
+    // ----------------------------
+    // CREATE FACTURE
+    // ----------------------------
+    public CommandeResponseDto createCommande(CommandeRequestDto dto) {
 
-        Place place = placeRepository.findById(placeId)
-                .orElseThrow(() -> new RuntimeException("Place introuvable"));
+        Client client = clientRepository.findById(dto.getClientId())
+                .orElseThrow(() -> new RuntimeException("Client introuvable"));
 
-        Commande cmd = new Commande();
+        double totalBaseHT = 0.0;
 
-        cmd.setPlace(place);
+        List<LigneCommandeResponseDto> lignes = new ArrayList<>();
 
-        // ⭐ REF AUTO
-        cmd.setRef(generateRef());
+        // Calcul des lignes (HT uniquement)
+        for (var l : dto.getLignes()) {
 
-        cmd.setDesign(dto.getDesign());
-        cmd.setHt(dto.getHt());
-        cmd.setCode(dto.getCode());
-        cmd.setRetenue(dto.getRetenue());
-        cmd.setMt(dto.getMt());
-        cmd.setAvance(dto.getAvance());
+            double base = l.getHt();
+            totalBaseHT += base;
 
-        // ⭐ BASE = HT
-        cmd.setBase(dto.getHt());
+            LigneCommandeResponseDto res = new LigneCommandeResponseDto();
+            res.setDesign(l.getDesign());
+            res.setBaseHT(base);
 
-        // ⭐ TVA depuis Place
-        cmd.setTva(place.getTva());
+            lignes.add(res);
+        }
 
-        // ⭐ TTC = HT + valeur TVA
-        // valeur tva = ht * (tva/100)
-        Double valeurTva = dto.getHt() * (cmd.getTva() / 100);
-        Double ttc = dto.getHt() + valeurTva;
+        // Calculs globaux
+        double totalRetenue = totalBaseHT * (dto.getRetenue() / 100);
+        double totalHTNet = totalBaseHT - totalRetenue;
+        double totalTva = totalBaseHT * 0.18;
+        double totalTTC = totalBaseHT + totalTva;
+        double totalNetAPayer = totalTTC - dto.getAvance();
 
-        cmd.setMtTtc(ttc);
+        // Sauvegarde commande
+        Commande commande = new Commande();
+        commande.setDesign("FACTURE MULTI-LIGNES");
+        commande.setHt(totalBaseHT);
+        commande.setRetenue(totalRetenue);
+        commande.setMt(totalHTNet);
+        commande.setTva(totalTva);
+        commande.setMtTtc(totalTTC);
+        commande.setAvance(dto.getAvance());
+        commande.setNet(totalNetAPayer);
 
-        // ⭐ NET = TTC - AVANCE
-        cmd.setNet(ttc - dto.getAvance());
+        Commande saved = commandeRepository.save(commande);
+        saved.setRef(generateRef(saved.getId()));
+        commandeRepository.save(saved);
 
-        return commandeRepository.save(cmd);
+        // Construction réponse
+        CommandeResponseDto response = new CommandeResponseDto();
+        response.setRef(saved.getRef());
+        response.setDateFacture(dto.getDateFacture());
+        response.setClient(mapClient(client));
+        response.setLignes(lignes);
+
+        response.setTotalBaseHT(totalBaseHT);
+        response.setTotalRetenue(totalRetenue);
+        response.setTotalHTNet(totalHTNet);
+        response.setTotalTva(totalTva);
+        response.setTotalTTC(totalTTC);
+        response.setTotalAvance(dto.getAvance());
+        response.setTotalNetAPayer(totalNetAPayer);
+
+        return response;
+    }
+
+    // ----------------------------
+    // REFERENCE AUTO "00001"
+    // ----------------------------
+    private String generateRef(Long id) {
+        return String.format("%05d", id);
+    }
+
+    // ----------------------------
+    // MAP CLIENT
+    // ----------------------------
+    private ClientDto mapClient(Client client) {
+        ClientDto c = new ClientDto();
+        c.setId(client.getId());
+        c.setNom(client.getNom());
+        c.setNif(client.getNIF());
+        c.setTelephone(client.getTelephone());
+        c.setAdresse(client.getAdresse());
+        return c;
     }
 }
