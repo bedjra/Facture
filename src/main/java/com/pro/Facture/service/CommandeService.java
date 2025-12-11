@@ -1,9 +1,6 @@
 package com.pro.Facture.service;
 
-import com.pro.Facture.Dto.ClientDto;
-import com.pro.Facture.Dto.CommandeRequestDto;
-import com.pro.Facture.Dto.CommandeResponseDto;
-import com.pro.Facture.Dto.LigneCommandeResponseDto;
+import com.pro.Facture.Dto.*;
 import com.pro.Facture.Entity.Client;
 import com.pro.Facture.Entity.Commande;
 import com.pro.Facture.repository.ClientRepository;
@@ -30,15 +27,17 @@ public class CommandeService {
     // ----------------------------
     public CommandeResponseDto createCommande(CommandeRequestDto dto) {
 
+        // Récupération client
         Client client = clientRepository.findById(dto.getClientId())
                 .orElseThrow(() -> new RuntimeException("Client introuvable"));
 
         double totalBaseHT = 0.0;
-
         List<LigneCommandeResponseDto> lignes = new ArrayList<>();
 
-        // Calcul des lignes (HT uniquement)
-        for (var l : dto.getLignes()) {
+        // ----------------------------
+        // Calcul des lignes
+        // ----------------------------
+        for (LigneCommandeDto l : dto.getLignes()) {
 
             double base = l.getHt();
             totalBaseHT += base;
@@ -50,15 +49,22 @@ public class CommandeService {
             lignes.add(res);
         }
 
+        // ----------------------------
         // Calculs globaux
+        // ----------------------------
         double totalRetenue = totalBaseHT * (dto.getRetenue() / 100);
         double totalHTNet = totalBaseHT - totalRetenue;
         double totalTva = totalBaseHT * 0.18;
         double totalTTC = totalBaseHT + totalTva;
         double totalNetAPayer = totalTTC - dto.getAvance();
 
+        // ----------------------------
         // Sauvegarde commande
+        // ----------------------------
         Commande commande = new Commande();
+        commande.setClient(client);                          // ✅ important
+        commande.setDateFacture(dto.getDateFacture());       // ✅ important
+
         commande.setDesign("FACTURE MULTI-LIGNES");
         commande.setHt(totalBaseHT);
         commande.setRetenue(totalRetenue);
@@ -68,14 +74,19 @@ public class CommandeService {
         commande.setAvance(dto.getAvance());
         commande.setNet(totalNetAPayer);
 
+        // Save initial
         Commande saved = commandeRepository.save(commande);
+
+        // Génération REF
         saved.setRef(generateRef(saved.getId()));
         commandeRepository.save(saved);
 
+        // ----------------------------
         // Construction réponse
+        // ----------------------------
         CommandeResponseDto response = new CommandeResponseDto();
         response.setRef(saved.getRef());
-        response.setDateFacture(dto.getDateFacture());
+        response.setDateFacture(saved.getDateFacture());
         response.setClient(mapClient(client));
         response.setLignes(lignes);
 

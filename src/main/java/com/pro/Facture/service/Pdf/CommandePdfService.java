@@ -15,57 +15,68 @@ public class CommandePdfService {
     public byte[] genererPdf(CommandeResponseDto dto, Place place) {
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        Rectangle size = new Rectangle(250, 700);
-        Document doc = new Document(size, 10, 10, 10, 10);
+
+        // 📄 Format A4 + marges propres
+        Document doc = new Document(PageSize.A4, 20, 20, 20, 20);
 
         try {
             PdfWriter.getInstance(doc, out);
             doc.open();
 
             // FONTS
-            Font title = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
-            Font bold = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9);
-            Font normal = FontFactory.getFont(FontFactory.HELVETICA, 8);
-            Font small = FontFactory.getFont(FontFactory.HELVETICA, 7);
+            Font title = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18);
+            Font bold = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11);
+            Font normal = FontFactory.getFont(FontFactory.HELVETICA, 10);
+            Font small = FontFactory.getFont(FontFactory.HELVETICA, 9);
 
-            // HEADER
+            // ===============================
+            // 📌 HEADER PLACE
+            // ===============================
             PdfPTable head = new PdfPTable(1);
             head.setWidthPercentage(100);
             head.getDefaultCell().setBorder(Rectangle.NO_BORDER);
 
-            head.addCell(new Paragraph(place.getNom(), bold));
-            if (place.getAdresse() != null) head.addCell(new Paragraph(place.getAdresse(), small));
+            head.addCell(new Phrase(place.getNom(), bold));
+            if (place.getAdresse() != null)
+                head.addCell(new Phrase(place.getAdresse(), small));
             if (place.getTelephone() != null)
-                head.addCell(new Paragraph("Tel : " + place.getTelephone(), small));
+                head.addCell(new Phrase("Téléphone : " + place.getTelephone(), small));
 
             doc.add(head);
             doc.add(Chunk.NEWLINE);
 
-            // TITRE
+            // ===============================
+            // 📌 TITRE FACTURE
+            // ===============================
             Paragraph titre = new Paragraph("FACTURE", title);
             titre.setAlignment(Element.ALIGN_CENTER);
             doc.add(titre);
 
             doc.add(Chunk.NEWLINE);
 
-            // INFO FACTURE
+            // ===============================
+            // 📌 INFORMATIONS FACTURE
+            // ===============================
             PdfPTable info = new PdfPTable(1);
             info.setWidthPercentage(100);
             info.getDefaultCell().setBorder(Rectangle.NO_BORDER);
 
-            info.addCell(new Paragraph("Réf : " + dto.getRef(), normal));
-            info.addCell(new Paragraph("Date : " + dto.getDateFacture(), normal));
-            info.addCell(new Paragraph("Client : " + dto.getClient().getNom(), normal));
+            info.addCell(new Phrase("Référence : " + dto.getRef(), normal));
+            info.addCell(new Phrase("Date : " + dto.getDateFacture(), normal));
+            info.addCell(new Phrase("Client : " + dto.getClient().getNom(), normal));
 
             doc.add(info);
 
             doc.add(Chunk.NEWLINE);
 
-            // TABLEAU DES LIGNES
+            // ===============================
+            // 📌 TABLEAU LIGNES DE COMMANDE
+            // ===============================
             PdfPTable table = new PdfPTable(2);
             table.setWidthPercentage(100);
-            table.setWidths(new float[]{2, 1});
+            table.setWidths(new float[]{3, 1.5f});
 
+            // En-têtes
             PdfPCell c1 = new PdfPCell(new Phrase("Désignation", bold));
             PdfPCell c2 = new PdfPCell(new Phrase("Montant HT", bold));
             c1.setHorizontalAlignment(Element.ALIGN_LEFT);
@@ -73,17 +84,22 @@ public class CommandePdfService {
             table.addCell(c1);
             table.addCell(c2);
 
+            // Contenu
             for (LigneCommandeResponseDto l : dto.getLignes()) {
                 table.addCell(new Phrase(l.getDesign(), normal));
                 table.addCell(new Phrase(format(l.getBaseHT()), normal));
             }
 
             doc.add(table);
+
             doc.add(Chunk.NEWLINE);
 
-            // TOTALS
+            // ===============================
+            // 📌 TOTALS
+            // ===============================
             PdfPTable tot = new PdfPTable(2);
-            tot.setWidthPercentage(100);
+            tot.setWidthPercentage(50);
+            tot.setHorizontalAlignment(Element.ALIGN_RIGHT);
             tot.setWidths(new float[]{2, 1});
             tot.getDefaultCell().setBorder(Rectangle.NO_BORDER);
 
@@ -99,6 +115,9 @@ public class CommandePdfService {
 
             doc.add(Chunk.NEWLINE);
 
+            // ===============================
+            // 📌 FOOTER
+            // ===============================
             Paragraph msg = new Paragraph("Merci pour votre confiance !", small);
             msg.setAlignment(Element.ALIGN_CENTER);
             doc.add(msg);
@@ -106,7 +125,7 @@ public class CommandePdfService {
             doc.close();
 
         } catch (Exception e) {
-            throw new RuntimeException("Erreur PDF : " + e.getMessage());
+            throw new RuntimeException("Erreur lors de la génération du PDF : " + e.getMessage());
         }
 
         return out.toByteArray();
