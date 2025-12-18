@@ -52,10 +52,12 @@ public class CommandeService {
         // ----------------------------
         // Calculs globaux
         // ----------------------------
+        // ----------------------------
+
         double totalRetenue = totalBaseHT * (dto.getRetenue() / 100);
-        double totalHTNet = totalBaseHT - totalRetenue;
-        double totalTva = totalBaseHT * 0.18;
-        double totalTTC = totalBaseHT + totalTva;
+        double totalMT = totalBaseHT - totalRetenue;      // MT
+        double totalTva = totalBaseHT * 0.18;              // TVA sur BASE ✅
+        double totalTTC = totalMT + totalTva;               // MT TTC ✅
         double totalNetAPayer = totalTTC - dto.getAvance();
 
         // ----------------------------
