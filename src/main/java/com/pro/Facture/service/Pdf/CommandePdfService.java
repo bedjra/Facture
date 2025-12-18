@@ -15,91 +15,89 @@ public class CommandePdfService {
     public byte[] genererPdf(CommandeResponseDto dto, Place place) {
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-
         Document doc = new Document(PageSize.A4, 25, 25, 28, 28);
 
         try {
             PdfWriter.getInstance(doc, out);
             doc.open();
 
-            // FONTS
+            // ===============================
+            // 🔤 FONTS
+            // ===============================
             Font fTitle = new Font(Font.FontFamily.HELVETICA, 16, Font.BOLD);
             Font fBold = new Font(Font.FontFamily.HELVETICA, 11, Font.BOLD);
             Font fNormal = new Font(Font.FontFamily.HELVETICA, 11);
-            Font fSmall = new Font(Font.FontFamily.HELVETICA, 9);
 
             // ===============================
-            // 🔵 ENTÊTE COMME LE PDF
-            // ===============================
+// 🔵 ENTÊTE
+// ===============================
             PdfPTable header = new PdfPTable(2);
             header.setWidthPercentage(100);
-            header.setWidths(new float[]{1, 2});
+            header.setWidths(new float[]{1, 3});
 
-            // Logo (optionnel)
-            PdfPCell logo = new PdfPCell();
-            logo.setBorder(Rectangle.NO_BORDER);
-            logo.setPadding(0);
+// ===== LOGO =====
+            PdfPCell logoCell = new PdfPCell();
+            logoCell.setBorder(Rectangle.NO_BORDER);
 
-            // Si tu as un logo → décommente :
-            // Image img = Image.getInstance("classpath:logo.png");
-            // img.scaleAbsolute(80, 60);
-            // logo.addElement(img);
+            if (place.getLogo() != null) {
+                Image logo = Image.getInstance(place.getLogo());
+                logo.scaleToFit(80, 80);
+                logoCell.addElement(logo);
+            }
 
-            header.addCell(logo);
+            header.addCell(logoCell);
 
-            // Texte du cabinet
-            PdfPCell textCab = new PdfPCell();
-            textCab.setBorder(Rectangle.NO_BORDER);
-            textCab.addElement(new Phrase(place.getNom(), fTitle));
-            textCab.addElement(new Phrase("Cabinet d'expertise comptable et d’audit", fNormal));
-            header.addCell(textCab);
+// ===== INFOS DU CABINET =====
+            PdfPCell infoCell = new PdfPCell();
+            infoCell.setBorder(Rectangle.NO_BORDER);
+
+            infoCell.addElement(new Phrase(place.getNom(), fTitle));
+            infoCell.addElement(new Phrase(place.getDesc(), fNormal));
+            infoCell.addElement(new Phrase("📍 " + place.getAdresse(), fNormal));
+            infoCell.addElement(new Phrase("📞 " + place.getTelephone() + " / " + place.getCel(), fNormal));
+            infoCell.addElement(new Phrase("✉ " + place.getEmail(), fNormal));
+
+            header.addCell(infoCell);
 
             doc.add(header);
-            doc.add(space(10));
+            doc.add(space(15));
 
             // ===============================
-            // 🔵 DETAILS CLIENT + FACTURE
+            // 🔵 INFOS CLIENT & FACTURE
             // ===============================
-
             PdfPTable info = new PdfPTable(2);
             info.setWidthPercentage(100);
-            info.setWidths(new float[]{1, 1});
 
-            // CLIENT
             PdfPTable client = new PdfPTable(1);
-            client.setWidthPercentage(100);
             client.addCell(block("Client : " + dto.getClient().getNom(), fBold));
             client.addCell(block("NIF : " + n(dto.getClient().getNIF()), fNormal));
             client.addCell(block("Téléphone : " + n(dto.getClient().getTelephone()), fNormal));
             client.addCell(block("Adresse : " + n(dto.getClient().getAdresse()), fNormal));
 
+            PdfPTable facture = new PdfPTable(1);
+            facture.addCell(block("Facture N° : " + dto.getRef(), fBold));
+            facture.addCell(block("Date : " + dto.getDateFacture(), fNormal));
+
             info.addCell(wrapper(client));
-
-            // FACTURE
-            PdfPTable blocFact = new PdfPTable(1);
-            blocFact.setWidthPercentage(100);
-            blocFact.addCell(block("Facture N° : " + dto.getRef(), fBold));
-            blocFact.addCell(block("Date : " + dto.getDateFacture().toString(), fNormal));
-
-            info.addCell(wrapper(blocFact));
+            info.addCell(wrapper(facture));
 
             doc.add(info);
             doc.add(space(15));
 
             // ===============================
-            // 🔵 TABLEAU PRINCIPAL
+            // 🔵 TABLE DES LIGNES
             // ===============================
-
             PdfPTable table = new PdfPTable(3);
             table.setWidthPercentage(100);
-            table.setWidths(new float[]{1, 3, 1});
+            table.setWidths(new float[]{1, 4, 2});
 
             table.addCell(headerCell("Réf", fBold));
             table.addCell(headerCell("Désignation", fBold));
             table.addCell(headerCell("MT HT", fBold));
 
+            int i = 1;
             for (LigneCommandeResponseDto l : dto.getLignes()) {
-                table.addCell(normalCell("00001", fNormal));
+                table.addCell(normalCell(String.valueOf(i++), fNormal));
                 table.addCell(normalCell(l.getDesign(), fNormal));
                 table.addCell(rightCell(format(l.getBaseHT()), fNormal));
             }
@@ -108,45 +106,64 @@ public class CommandePdfService {
             doc.add(space(15));
 
             // ===============================
-            // 🔵 TABLEAU RÉCAPITULATIF
+            // 🔵 TABLEAU RÉCAPITULATIF (HORIZONTAL)
             // ===============================
-            PdfPTable recap = new PdfPTable(6);
+            PdfPTable recap = new PdfPTable(7);
             recap.setWidthPercentage(100);
-            recap.setWidths(new float[]{1,1,1,1,1,1});
+            recap.setWidths(new float[]{1,1,1,1,1,1,1});
 
             recap.addCell(headerCell("Base", fBold));
-            recap.addCell(headerCell("Retenue 5%", fBold));
+            recap.addCell(headerCell("Retenue", fBold));
             recap.addCell(headerCell("MT", fBold));
             recap.addCell(headerCell("TVA 18%", fBold));
             recap.addCell(headerCell("MT TTC", fBold));
-            recap.addCell(headerCell("NET À PAYER", fBold));
+            recap.addCell(headerCell("Avance", fBold));
+            recap.addCell(headerCell("RESTE À PAYER", fBold));
 
             recap.addCell(normalCell(format(dto.getTotalBaseHT()), fNormal));
             recap.addCell(normalCell(format(dto.getTotalRetenue()), fNormal));
             recap.addCell(normalCell(format(dto.getTotalHTNet()), fNormal));
             recap.addCell(normalCell(format(dto.getTotalTva()), fNormal));
             recap.addCell(normalCell(format(dto.getTotalTTC()), fNormal));
+            recap.addCell(normalCell(format(dto.getTotalAvance()), fNormal));
             recap.addCell(normalCell(format(dto.getTotalNetAPayer()), fBold));
 
             doc.add(recap);
-            doc.add(space(10));
+            doc.add(space(15));
 
             // ===============================
-            // 🔵 ARRETE À LA SOMME
+            // 🔵 TABLEAU CONDITIONS
             // ===============================
-            Paragraph arr = new Paragraph(
-                    "Arrêté la présente facture à la somme de : " +
-//                            valeurEnLettre((int) dto.getTotalNetAPayer()) + " FCFA",
+            PdfPTable conditions = new PdfPTable(2);
+            conditions.setWidthPercentage(60);
+            conditions.setHorizontalAlignment(Element.ALIGN_LEFT);
+            conditions.setWidths(new float[]{2, 2});
+
+            conditions.addCell(headerCell("Condition de règlement", fBold));
+            conditions.addCell(normalCell(
+                    "Reste à payer : " + format(dto.getTotalNetAPayer()) + " FCFA",
                     fNormal
-            );
-            doc.add(arr);
-            doc.add(space(20));
+            ));
+
+            conditions.addCell(headerCell("Émis par", fBold));
+            conditions.addCell(normalCell("Utilisateur", fNormal));
+
+            conditions.addCell(headerCell("Arrêté la présente facture à la somme de", fBold));
+            conditions.addCell(normalCell(
+                    format(dto.getTotalNetAPayer()) + " FCFA",
+                    fBold
+            ));
+
+            doc.add(conditions);
+            doc.add(space(25));
 
             // ===============================
             // 🔵 SIGNATURE
             // ===============================
-
-            Paragraph sign = new Paragraph("DIRECTEUR GENERAL\n\n\n" + place.getEmail(), fBold);
+            Paragraph sign = new Paragraph(
+                    "DIRECTEUR GENERAL\n\n\n" + place.getEmail(),
+                    fBold
+            );
             sign.setAlignment(Element.ALIGN_RIGHT);
             doc.add(sign);
 
@@ -159,16 +176,13 @@ public class CommandePdfService {
         return out.toByteArray();
     }
 
-
-    // ================================
+    // ===============================
     // 🔧 HELPERS
-    // ================================
-
+    // ===============================
     private PdfPCell block(String s, Font f) {
         PdfPCell c = new PdfPCell(new Phrase(s, f));
-        c.setHorizontalAlignment(Element.ALIGN_LEFT);
         c.setBorder(Rectangle.NO_BORDER);
-        c.setPaddingBottom(3);
+        c.setPadding(4);
         return c;
     }
 
@@ -181,14 +195,13 @@ public class CommandePdfService {
     }
 
     private PdfPCell normalCell(String s, Font f) {
-        PdfPCell c = new PdfPCell(new Phrase(s, f));
-        c.setHorizontalAlignment(Element.ALIGN_LEFT);
+        PdfPCell c = new PdfPCell(new Phrase(s + " FCFA", f));
         c.setPadding(6);
         return c;
     }
 
     private PdfPCell rightCell(String s, Font f) {
-        PdfPCell c = new PdfPCell(new Phrase(s, f));
+        PdfPCell c = new PdfPCell(new Phrase(s + " FCFA", f));
         c.setHorizontalAlignment(Element.ALIGN_RIGHT);
         c.setPadding(6);
         return c;
@@ -210,12 +223,7 @@ public class CommandePdfService {
         return String.format("%,.0f", d);
     }
 
-    private String n(String str) {
-        return str == null ? "" : str;
-    }
-
-    // Convertir en lettres simplifié
-    private String valeurEnLettre(int n) {
-        return n + ""; // si tu veux je peux te générer une vraie fonction complète
+    private String n(String s) {
+        return s == null ? "" : s;
     }
 }

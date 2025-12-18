@@ -25,6 +25,7 @@ public class CommandeService {
     // ----------------------------
     // CREATE FACTURE
     // ----------------------------
+
     public CommandeResponseDto createCommande(CommandeRequestDto dto) {
 
         // Récupération client
@@ -50,27 +51,25 @@ public class CommandeService {
         }
 
         // ----------------------------
-        // Calculs globaux
+        // Calculs globaux (CORRECTS)
         // ----------------------------
-        // ----------------------------
-
         double totalRetenue = totalBaseHT * (dto.getRetenue() / 100);
         double totalMT = totalBaseHT - totalRetenue;      // MT
-        double totalTva = totalBaseHT * 0.18;              // TVA sur BASE ✅
-        double totalTTC = totalMT + totalTva;               // MT TTC ✅
+        double totalTva = totalBaseHT * 0.18;             // TVA sur BASE
+        double totalTTC = totalMT + totalTva;             // MT + TVA
         double totalNetAPayer = totalTTC - dto.getAvance();
 
         // ----------------------------
         // Sauvegarde commande
         // ----------------------------
         Commande commande = new Commande();
-        commande.setClient(client);                          // ✅ important
-        commande.setDateFacture(dto.getDateFacture());       // ✅ important
+        commande.setClient(client);
+        commande.setDateFacture(dto.getDateFacture());
 
         commande.setDesign("FACTURE MULTI-LIGNES");
         commande.setHt(totalBaseHT);
         commande.setRetenue(totalRetenue);
-        commande.setMt(totalHTNet);
+        commande.setMt(totalMT);            // ✅ ICI
         commande.setTva(totalTva);
         commande.setMtTtc(totalTTC);
         commande.setAvance(dto.getAvance());
@@ -94,7 +93,7 @@ public class CommandeService {
 
         response.setTotalBaseHT(totalBaseHT);
         response.setTotalRetenue(totalRetenue);
-        response.setTotalHTNet(totalHTNet);
+        response.setTotalHTNet(totalMT);    // ✅ MT
         response.setTotalTva(totalTva);
         response.setTotalTTC(totalTTC);
         response.setTotalAvance(dto.getAvance());
