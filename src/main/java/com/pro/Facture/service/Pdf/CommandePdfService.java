@@ -105,29 +105,7 @@ public class CommandePdfService {
             // ===============================
             // 🔵 INFOS CLIENT & FACTURE DANS DES BOÎTES
             // ===============================
-            PdfPTable info = new PdfPTable(2);
-            info.setWidthPercentage(100);
-            info.setWidths(new float[]{1, 1});
-            info.setSpacingAfter(20);
-
-            // CLIENT
-            PdfPTable clientTable = new PdfPTable(1);
-            clientTable.addCell(createSectionHeader("INFORMATIONS CLIENT", fBold));
-            clientTable.addCell(createInfoRow("Client", dto.getClient().getNom(), fBold, fNormal));
-            clientTable.addCell(createInfoRow("NIF", n(dto.getClient().getNIF()), fSmall, fNormal));
-            clientTable.addCell(createInfoRow("Téléphone", n(dto.getClient().getTelephone()), fSmall, fNormal));
-            clientTable.addCell(createInfoRow("Adresse", n(dto.getClient().getAdresse()), fSmall, fNormal));
-
-            // FACTURE
-            PdfPTable factureTable = new PdfPTable(1);
-            factureTable.addCell(createSectionHeader("DÉTAILS FACTURE", fBold));
-            factureTable.addCell(createInfoRow("Numéro", dto.getRef(), fBold, fHighlight));
-            factureTable.addCell(createInfoRow("Date", formatDate(dto.getDateFacture()), fSmall, fNormal));
-
-            info.addCell(wrapperWithBorder(clientTable));
-            info.addCell(wrapperWithBorder(factureTable));
-
-            doc.add(info);
+            
 
             // ===============================
             // 🔵 TABLE DES LIGNES AMÉLIORÉE
