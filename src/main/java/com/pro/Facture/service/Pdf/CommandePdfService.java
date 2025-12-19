@@ -99,7 +99,7 @@ public class CommandePdfService {
             // ===============================
             Paragraph factureTitle = new Paragraph("FACTURE", fSubtitle);
             factureTitle.setAlignment(Element.ALIGN_CENTER);
-            factureTitle.setSpacingAfter(20);
+            factureTitle.setSpacingAfter(12);
             doc.add(factureTitle);
 
             // ===============================
@@ -121,13 +121,16 @@ public class CommandePdfService {
             // FACTURE
             PdfPTable factureTable = new PdfPTable(1);
             factureTable.addCell(createSectionHeader("DÉTAILS FACTURE", fBold));
+
             factureTable.addCell(createInfoRow("Numéro", dto.getRef(), fBold, fHighlight));
+            factureTable.addCell(createInfoRow("Référence", dto.getRef(), fSmall, fNormal));
             factureTable.addCell(createInfoRow("Date", formatDate(dto.getDateFacture()), fSmall, fNormal));
 
             info.addCell(wrapperWithBorder(clientTable));
             info.addCell(wrapperWithBorder(factureTable));
 
             doc.add(info);
+
 
             // ===============================
             // 🔵 TABLE DES LIGNES AMÉLIORÉE
@@ -321,15 +324,20 @@ public class CommandePdfService {
     private PdfPCell createInfoRow(String label, String value, Font labelFont, Font valueFont) {
         PdfPCell cell = new PdfPCell();
         cell.setBorder(Rectangle.NO_BORDER);
-        cell.setPadding(5);
+        cell.setPaddingTop(3);
+        cell.setPaddingBottom(3);
+        cell.setPaddingLeft(6);
+        cell.setPaddingRight(6);
 
         Paragraph p = new Paragraph();
-        p.add(new Chunk(label + ": ", labelFont));
+        p.setLeading(12); // 👈 contrôle hauteur ligne
+        p.add(new Chunk(label + " : ", labelFont));
         p.add(new Chunk(value, valueFont));
-        cell.addElement(p);
 
+        cell.addElement(p);
         return cell;
     }
+
 
     private PdfPCell createTableHeader(String text, Font font) {
         PdfPCell cell = new PdfPCell(new Phrase(text, font));
