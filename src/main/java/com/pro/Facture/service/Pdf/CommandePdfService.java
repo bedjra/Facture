@@ -105,7 +105,29 @@ public class CommandePdfService {
             // ===============================
             // 🔵 INFOS CLIENT & FACTURE DANS DES BOÎTES
             // ===============================
-            
+            PdfPTable info = new PdfPTable(2);
+            info.setWidthPercentage(100);
+            info.setWidths(new float[]{1, 1});
+            info.setSpacingAfter(20);
+
+            // CLIENT
+            PdfPTable clientTable = new PdfPTable(1);
+            clientTable.addCell(createSectionHeader("INFORMATIONS CLIENT", fBold));
+            clientTable.addCell(createInfoRow("Client", dto.getClient().getNom(), fBold, fNormal));
+            clientTable.addCell(createInfoRow("NIF", n(dto.getClient().getNIF()), fSmall, fNormal));
+            clientTable.addCell(createInfoRow("Téléphone", n(dto.getClient().getTelephone()), fSmall, fNormal));
+            clientTable.addCell(createInfoRow("Adresse", n(dto.getClient().getAdresse()), fSmall, fNormal));
+
+            // FACTURE
+            PdfPTable factureTable = new PdfPTable(1);
+            factureTable.addCell(createSectionHeader("DÉTAILS FACTURE", fBold));
+            factureTable.addCell(createInfoRow("Numéro", dto.getRef(), fBold, fHighlight));
+            factureTable.addCell(createInfoRow("Date", formatDate(dto.getDateFacture()), fSmall, fNormal));
+
+            info.addCell(wrapperWithBorder(clientTable));
+            info.addCell(wrapperWithBorder(factureTable));
+
+            doc.add(info);
 
             // ===============================
             // 🔵 TABLE DES LIGNES AMÉLIORÉE
@@ -169,23 +191,70 @@ public class CommandePdfService {
             doc.add(recap);
 
             // ===============================
-            // 🔵 CONDITIONS DE RÈGLEMENT
+            // 🔵 CONDITIONS DE RÈGLEMENT (FULL WIDTH)
             // ===============================
             PdfPTable conditions = new PdfPTable(1);
             conditions.setWidthPercentage(100);
-            conditions.setSpacingAfter(15);
+            conditions.setSpacingAfter(12);
 
-            PdfPCell condHeader = new PdfPCell(new Phrase("CONDITIONS DE RÈGLEMENT", fBold));
-            condHeader.setBackgroundColor(HEADER_BG);
-            condHeader.setPadding(8);
-            condHeader.setHorizontalAlignment(Element.ALIGN_CENTER);
-            conditions.addCell(condHeader);
+// ===== TABLE INTERNE (2 COLONNES) =====
+            PdfPTable lineTable = new PdfPTable(2);
+            lineTable.setWidthPercentage(100);
+            lineTable.setWidths(new float[]{3f, 2f});
 
-            PdfPCell condContent = new PdfPCell();
-            condContent.setPadding(10);
-            condContent.addElement(new Phrase("Émis par : Utilisateur", fNormal));
-            condContent.addElement(new Phrase("\nArrêté la présente facture à la somme de : " + format(dto.getTotalNetAPayer()) + " FCFA", fBold));
-            conditions.addCell(condContent);
+// ---- GAUCHE
+            PdfPCell leftCell = new PdfPCell();
+            leftCell.setBorder(Rectangle.NO_BORDER);
+            leftCell.setPadding(0);
+
+            Paragraph left = new Paragraph();
+            left.add(new Chunk("CONDITION DE RÈGLEMENT : ", fBold));
+            left.add(new Chunk(format(dto.getTotalNetAPayer()) + " FCFA", fHighlight));
+
+            leftCell.addElement(left);
+            lineTable.addCell(leftCell);
+
+// ---- DROITE
+            PdfPCell rightCell = new PdfPCell();
+            rightCell.setBorder(Rectangle.NO_BORDER);
+            rightCell.setPadding(0);
+
+            Paragraph right = new Paragraph(
+                    "Émis par : " + place.getEmail(),
+                    fNormal
+            );
+            right.setAlignment(Element.ALIGN_RIGHT);
+
+            rightCell.addElement(right);
+            lineTable.addCell(rightCell);
+
+// ===== CELLULE PRINCIPALE ENCADRÉE =====
+            PdfPCell mainLine = new PdfPCell(lineTable);
+            mainLine.setBorder(Rectangle.BOX);
+            mainLine.setBorderColor(TABLE_BORDER);
+            mainLine.setPadding(8);
+
+            conditions.addCell(mainLine);
+
+// ===== LIGNE EN DESSOUS =====
+            PdfPCell amountLine = new PdfPCell();
+            amountLine.setBorder(Rectangle.NO_BORDER);
+            amountLine.setPaddingTop(6);
+
+            long montant = Math.round(dto.getTotalNetAPayer());
+
+            Paragraph amountText = new Paragraph(
+                    "Arrêté la présente facture à la somme de : "
+                            + nombreEnLettres(montant).toUpperCase()
+                            + " ("
+                            + format(montant)
+                            + " FCFA)",
+                    fBold
+            );
+
+
+            amountLine.addElement(amountText);
+            conditions.addCell(amountLine);
 
             doc.add(conditions);
 
@@ -364,4 +433,50 @@ public class CommandePdfService {
     private String n(String s) {
         return s == null || s.isEmpty() ? "N/A" : s;
     }
+
+    private String nombreEnLettres(long number) {
+        if (number == 0) return "zéro";
+
+        String[] units = {
+                "", "un", "deux", "trois", "quatre", "cinq",
+                "six", "sept", "huit", "neuf", "dix",
+                "onze", "douze", "treize", "quatorze", "quinze",
+                "seize", "dix-sept", "dix-huit", "dix-neuf"
+        };
+
+        String[] tens = {
+                "", "", "vingt", "trente", "quarante",
+                "cinquante", "soixante", "soixante-dix",
+                "quatre-vingt", "quatre-vingt-dix"
+        };
+
+        if (number < 20) {
+            return units[(int) number];
+        }
+
+        if (number < 100) {
+            int t = (int) number / 10;
+            int u = (int) number % 10;
+            return tens[t] + (u != 0 ? "-" + units[u] : "");
+        }
+
+        if (number < 1000) {
+            int h = (int) number / 100;
+            int r = (int) number % 100;
+            return (h > 1 ? units[h] + " " : "")
+                    + "cent"
+                    + (r != 0 ? " " + nombreEnLettres(r) : "");
+        }
+
+        if (number < 1_000_000) {
+            long m = number / 1000;
+            long r = number % 1000;
+            return (m > 1 ? nombreEnLettres(m) + " " : "")
+                    + "mille"
+                    + (r != 0 ? " " + nombreEnLettres(r) : "");
+        }
+
+        return String.valueOf(number); // sécurité
+    }
+
 }
