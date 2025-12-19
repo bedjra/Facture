@@ -106,7 +106,7 @@ public class CommandeService {
     // REFERENCE AUTO "00001"
     // ----------------------------
     private String generateRef(Long id) {
-        return String.format("%05d", id);
+        return String.format("REF-%05d", id);
     }
 
     // ----------------------------

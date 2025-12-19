@@ -51,7 +51,7 @@ public class CommandePdfService {
             PdfPTable header = new PdfPTable(2);
             header.setWidthPercentage(100);
             header.setWidths(new float[]{1.2f, 2.8f});
-            header.setSpacingAfter(20);
+            header.setSpacingAfter(10);
 
             // ===== LOGO AVEC BORDURE =====
             PdfPCell logoCell = new PdfPCell();
