@@ -139,12 +139,14 @@ public class CommandePdfService {
 
             table.addCell(createTableHeader("N°", fBold));
             table.addCell(createTableHeader("DÉSIGNATION", fBold));
+            table.addCell(createTableHeader("QUANTITÉ", fBold));
             table.addCell(createTableHeader("MONTANT HT", fBold));
 
             int i = 1;
             for (LigneCommandeResponseDto l : dto.getLignes()) {
-                table.addCell(createTableCell(dto.getRef(), fNormal, Element.ALIGN_CENTER));
+                table.addCell(createTableCell(String.valueOf(i++), fNormal, Element.ALIGN_CENTER));
                 table.addCell(createTableCell(l.getDesign(), fNormal, Element.ALIGN_LEFT));
+                table.addCell(createTableCell("1", fNormal, Element.ALIGN_CENTER));
                 table.addCell(createTableCell(format(l.getBaseHT()) + " FCFA", fNormal, Element.ALIGN_RIGHT));
             }
 
@@ -319,22 +321,59 @@ public class CommandePdfService {
     }
 
     private void addFooter(PdfWriter writer, Place place, Font font) throws DocumentException {
+
+        Font boldSmall = new Font(Font.FontFamily.HELVETICA, 8, Font.BOLD, BaseColor.DARK_GRAY);
+        Font normalSmall = new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL, BaseColor.DARK_GRAY);
+        Font blueSmall = new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL, new BaseColor(0, 0, 180));
+
         PdfPTable footer = new PdfPTable(1);
         footer.setTotalWidth(writer.getPageSize().getWidth() - 60);
         footer.setLockedWidth(true);
 
-        PdfPCell cell = new PdfPCell(new Phrase(
-                place.getNom() + " • " + place.getTelephone() + " • " + place.getEmail(),
-                font
-        ));
-        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        PdfPCell cell = new PdfPCell();
         cell.setBorder(Rectangle.TOP);
         cell.setBorderColor(TABLE_BORDER);
-        cell.setPaddingTop(8);
+        cell.setPaddingTop(6);
+        cell.setPaddingBottom(6);
+        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+
+        // 🔹 Ligne 1 – Activités (GRAS)
+        Paragraph l1 = new Paragraph(
+                "Audit, Assistance Comptable, fiscale et Sociale - Travaux d’inventaire, "
+                        + "Gestion des Salaires - Conseils et Formations",
+                boldSmall
+        );
+        l1.setAlignment(Element.ALIGN_CENTER);
+        cell.addElement(l1);
+
+        // 🔹 Ligne 2 – Adresse
+        Paragraph l2 = new Paragraph(
+                "Non loin du carrefour Aïsed, juste à 50m de la pharmacie Adouni (LOME-TOGO)",
+                normalSmall
+        );
+        l2.setAlignment(Element.ALIGN_CENTER);
+        cell.addElement(l2);
+
+        // 🔹 Ligne 3 – Contacts (BLEU)
+        Paragraph l3 = new Paragraph(
+                "Tel: 90 88 94 60 / 99 70 42 88 / 97 82 28 28  •  "
+                        + "cfacigroup@gmail.com  •  NIF: 1001727149  •  N°CNSS: 474195",
+                blueSmall
+        );
+        l3.setAlignment(Element.ALIGN_CENTER);
+        cell.addElement(l3);
+
         footer.addCell(cell);
 
-        footer.writeSelectedRows(0, -1, 30, 40, writer.getDirectContent());
+        footer.writeSelectedRows(
+                0,
+                -1,
+                30,
+                55,
+                writer.getDirectContent()
+        );
     }
+
 
     private String format(double d) {
         return String.format("%,.0f", d);

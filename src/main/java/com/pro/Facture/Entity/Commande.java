@@ -25,9 +25,9 @@ public class Commande {
 
     private String design;
     private Double ht;
-    private String code;
+//    private String code;
 
-    private Double base;   // = ht automatique
+//    private Double base;   // = ht automatique
     private Double retenue;
     private Double mt;
 
@@ -84,21 +84,21 @@ public class Commande {
         this.ht = ht;
     }
 
-    public String getCode() {
-        return code;
-    }
-
-    public void setCode(String code) {
-        this.code = code;
-    }
-
-    public Double getBase() {
-        return base;
-    }
-
-    public void setBase(Double base) {
-        this.base = base;
-    }
+//    public String getCode() {
+//        return code;
+//    }
+//
+//    public void setCode(String code) {
+//        this.code = code;
+//    }
+//
+//    public Double getBase() {
+//        return base;
+//    }
+//
+//    public void setBase(Double base) {
+//        this.base = base;
+//    }
 
     public Double getRetenue() {
         return retenue;
