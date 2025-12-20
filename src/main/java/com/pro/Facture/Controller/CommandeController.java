@@ -4,6 +4,7 @@ import com.pro.Facture.Dto.CommandeRequestDto;
 import com.pro.Facture.Dto.CommandeResponseDto;
 import com.pro.Facture.Entity.Place;
 import com.pro.Facture.service.CommandeService;
+import com.pro.Facture.service.DashboardService;
 import com.pro.Facture.service.Pdf.CommandePdfService;
 import com.pro.Facture.service.PlaceService;
 import org.springframework.http.HttpHeaders;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/commande")
@@ -24,15 +26,19 @@ public class CommandeController {
     private final CommandeService commandeService;
     private final PlaceService placeService;
     private final CommandePdfService pdfService;
+    private final DashboardService dashService;
 
     public CommandeController(CommandeService commandeService,
                               PlaceService placeService,
-
+                              DashboardService dashService,
                               CommandePdfService pdfService) {
+
         this.commandeService = commandeService;
         this.placeService = placeService;
+        this.dashService = dashService;
         this.pdfService = pdfService;
     }
+
 
     // ----------------------------
     // POST - GENERER FACTURE PDF
@@ -74,6 +80,12 @@ public class CommandeController {
     @GetMapping("/last")
     public List<CommandeResponseDto> getLastFive() {
         return commandeService.getLastFiveCommandes();
+    }
+
+
+    @GetMapping("/facturé")
+    public Map<String, Object> totalFacture() {
+        return dashService.getTotalFacture();
     }
 
 }
