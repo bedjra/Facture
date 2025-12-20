@@ -202,4 +202,15 @@ public class CommandeService {
         return dto;
     }
 
+    // ----------------------------
+    // GET 5 DERNIÈRES COMMANDES
+    // ----------------------------
+    public List<CommandeResponseDto> getLastFiveCommandes() {
+
+        return commandeRepository.findTop5ByOrderByIdDesc()
+                .stream()
+                .map(this::mapCommandeToDto)
+                .collect(Collectors.toList());
+    }
+
 }

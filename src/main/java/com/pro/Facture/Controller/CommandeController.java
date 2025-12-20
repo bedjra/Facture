@@ -56,21 +56,7 @@ public class CommandeController {
     public List<CommandeResponseDto> getAll() {
         return commandeService.getAll();
     }
-
-
-//    @GetMapping("/{id}/pdf")
-//    public ResponseEntity<byte[]> getPdf(@PathVariable Long id) {
-//
-//        CommandeResponseDto dto = commandeService.getById(id);
-//        Place place = placeService.get(); // si tu charges les infos entreprise
-//
-//        byte[] pdf = pdfService.genererPdf(dto, place);
-//
-//        return ResponseEntity.ok()
-//                .header("Content-Disposition", "attachment; filename=facture_" + dto.getRef() + ".pdf")
-//                .contentType(MediaType.APPLICATION_PDF)
-//                .body(pdf);
-//    }
+    
 
 
     // GET BY ID
