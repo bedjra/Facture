@@ -41,8 +41,7 @@ public class DashboardService {
         Map<String, Object> res = new HashMap<>();
         res.put("totalPaye", commandeRepository.totalPaye());
         res.put("nombreFacturesPayees", commandeRepository.nombreFacturesPayees());
-        res.put("evolutionPaye", 0); // 🔹 logique mois plus tard
-
+        res.put("evolutionPaye", 100); 
         return res;
     }
 
