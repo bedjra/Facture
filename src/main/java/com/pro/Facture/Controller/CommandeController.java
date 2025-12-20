@@ -56,20 +56,24 @@ public class CommandeController {
     public List<CommandeResponseDto> getAll() {
         return commandeService.getAll();
     }
-    
 
 
-    // GET BY ID
+
     @GetMapping("/{id}")
     public CommandeResponseDto getById(@PathVariable Long id) {
         return commandeService.getById(id);
     }
 
-    // DELETE
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Long id) {
         commandeService.deleteById(id);
         return "Commande supprimée avec succès";
+    }
+
+
+    @GetMapping("/last")
+    public List<CommandeResponseDto> getLastFive() {
+        return commandeService.getLastFiveCommandes();
     }
 
 }

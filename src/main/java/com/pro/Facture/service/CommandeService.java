@@ -207,7 +207,7 @@ public class CommandeService {
     // ----------------------------
     public List<CommandeResponseDto> getLastFiveCommandes() {
 
-        return commandeRepository.findTop5ByOrderByIdDesc()
+        return commandeRepository.findTop3ByOrderByIdDesc()
                 .stream()
                 .map(this::mapCommandeToDto)
                 .collect(Collectors.toList());
