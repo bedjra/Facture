@@ -35,4 +35,30 @@ public class DashboardService {
         return res;
     }
 
+    public Map<String, Object> getTotalPaye() {
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("totalPaye", commandeRepository.totalPaye());
+        res.put("nombreFacturesPayees", commandeRepository.nombreFacturesPayees());
+
+        return res;
+    }
+
+
+    public Map<String, Object> getTotalImpaye() {
+
+        return Map.of(
+                "totalImpaye", commandeRepository.totalImpaye()
+        );
+    }
+
+
+    public Map<String, Object> getFacturesEnRetard() {
+
+        return Map.of(
+                "facturesEnRetard", commandeRepository.facturesEnRetard()
+        );
+    }
+
+
 }

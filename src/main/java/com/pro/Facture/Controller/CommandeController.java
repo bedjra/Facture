@@ -88,4 +88,20 @@ public class CommandeController {
         return dashService.getTotalFacture();
     }
 
+    @GetMapping("/payé")
+    public Map<String, Object> totalPaye() {
+        return dashService.getTotalPaye();
+    }
+
+    @GetMapping("/impayé")
+    public Map<String, Object> totalImpaye() {
+        return dashService.getTotalImpaye();
+    }
+
+    @GetMapping("/retard")
+    public Map<String, Object> facturesEnRetard() {
+        return dashService.getFacturesEnRetard();
+    }
+
+
 }

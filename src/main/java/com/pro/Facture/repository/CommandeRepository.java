@@ -33,4 +33,26 @@ public interface CommandeRepository extends JpaRepository<Commande, Long> {
 """)
     double totalFactureMoisPrecedent();
 
+
+
+
+    @Query("SELECT COALESCE(SUM(c.avance),0) FROM Commande c")
+    double totalPaye();
+
+    @Query("SELECT COUNT(c) FROM Commande c WHERE c.net = 0")
+    long nombreFacturesPayees();
+
+
+    @Query("SELECT COALESCE(SUM(c.net),0) FROM Commande c")
+    double totalImpaye();
+
+
+    @Query("""
+    SELECT COUNT(c)
+    FROM Commande c
+    WHERE c.net > 0
+      AND c.dateFacture < CURRENT_DATE
+""")
+    long facturesEnRetard();
+
 }
