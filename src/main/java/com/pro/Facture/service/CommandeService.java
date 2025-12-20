@@ -3,11 +3,15 @@ package com.pro.Facture.service;
 import com.pro.Facture.Dto.*;
 import com.pro.Facture.Entity.Client;
 import com.pro.Facture.Entity.Commande;
+import com.pro.Facture.Entity.Place;
 import com.pro.Facture.repository.ClientRepository;
 import com.pro.Facture.repository.CommandeRepository;
+import com.pro.Facture.repository.PlaceRepository;
+import com.pro.Facture.service.Pdf.CommandePdfService;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,10 +20,18 @@ public class CommandeService {
 
     private final CommandeRepository commandeRepository;
     private final ClientRepository clientRepository;
+    private final CommandePdfService commandePdfService;
+    private final PlaceRepository placeRepository;
 
-    public CommandeService(CommandeRepository commandeRepository, ClientRepository clientRepository) {
+    public CommandeService(CommandeRepository commandeRepository,
+                           ClientRepository clientRepository,
+                           CommandePdfService commandePdfService,
+                           PlaceRepository placeRepository) {
+
         this.commandeRepository = commandeRepository;
         this.clientRepository = clientRepository;
+        this.commandePdfService = commandePdfService;
+        this.placeRepository = placeRepository;
     }
 
     // ----------------------------
@@ -106,7 +118,7 @@ public class CommandeService {
     // REFERENCE AUTO "00001"
     // ----------------------------
     private String generateRef(Long id) {
-        return String.format("REF-%05d", id);
+        return String.format("ref-%05d", id);
     }
 
     // ----------------------------
@@ -137,11 +149,25 @@ public class CommandeService {
 // GET ONE COMMAND BY ID
 // ----------------------------
     public CommandeResponseDto getById(Long id) {
+        // Récupérer la commande
         Commande cmd = commandeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Commande introuvable"));
 
-        return mapCommandeToDto(cmd);
+        // Mapper la commande vers le DTO
+        CommandeResponseDto dto = mapCommandeToDto(cmd);
+
+        // 🔹 Récupérer le Place depuis la base
+        Place place = placeRepository.findById(1L) // ou une logique pour récupérer le bon Place
+                .orElseThrow(() -> new RuntimeException("Place introuvable"));
+
+        // Générer le PDF et le convertir en Base64
+        byte[] pdfBytes = commandePdfService.genererPdf(dto, place);
+        String pdfBase64 = Base64.getEncoder().encodeToString(pdfBytes);
+        dto.setPdfBase64(pdfBase64);
+
+        return dto;
     }
+
 
     // ----------------------------
 // DELETE COMMAND BY ID

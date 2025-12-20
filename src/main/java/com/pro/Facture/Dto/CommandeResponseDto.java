@@ -1,11 +1,11 @@
 package com.pro.Facture.Dto;
 
-
 import java.time.LocalDate;
 import java.util.List;
 
 public class CommandeResponseDto {
 
+    private int id;
     private String ref;
     private LocalDate dateFacture;
 
@@ -20,6 +20,14 @@ public class CommandeResponseDto {
     private Double totalTTC;
     private Double totalAvance;
     private Double totalNetAPayer;
+
+    public String getId() {
+        return String.valueOf(id);
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
 
     public String getRef() {
         return ref;
@@ -107,5 +115,17 @@ public class CommandeResponseDto {
 
     public void setTotalNetAPayer(Double totalNetAPayer) {
         this.totalNetAPayer = totalNetAPayer;
+    }
+
+    // 🔹 Nouveau champ pour PDF
+    private String pdfBase64;
+
+    // getters et setters...
+    public String getPdfBase64() {
+        return pdfBase64;
+    }
+
+    public void setPdfBase64(String pdfBase64) {
+        this.pdfBase64 = pdfBase64;
     }
 }

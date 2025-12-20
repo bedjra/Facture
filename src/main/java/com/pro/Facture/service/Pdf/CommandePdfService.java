@@ -89,7 +89,7 @@ public class CommandePdfService {
 
             infoCell.addElement(createInfoLine("📍", place.getAdresse(), fNormal));
             infoCell.addElement(createInfoLine("📞", place.getTelephone() + " / " + place.getCel(), fNormal));
-            infoCell.addElement(createInfoLine("✉", place.getEmail(), fNormal));
+//            infoCell.addElement(createInfoLine("✉", place.getEmail(), fNormal));
 
             header.addCell(infoCell);
             doc.add(header);
@@ -123,7 +123,7 @@ public class CommandePdfService {
             factureTable.addCell(createSectionHeader("DÉTAILS FACTURE", fBold));
 
             factureTable.addCell(createInfoRow("Numéro", dto.getRef(), fBold, fHighlight));
-            factureTable.addCell(createInfoRow("Référence", dto.getRef(), fSmall, fNormal));
+//            factureTable.addCell(createInfoRow("Référence", dto.getRef(), fSmall, fNormal));
             factureTable.addCell(createInfoRow("Date", formatDate(dto.getDateFacture()), fSmall, fNormal));
 
             info.addCell(wrapperWithBorder(clientTable));
@@ -135,25 +135,24 @@ public class CommandePdfService {
             // ===============================
             // 🔵 TABLE DES LIGNES AMÉLIORÉE
             // ===============================
-            PdfPTable table = new PdfPTable(4);
+            PdfPTable table = new PdfPTable(3);
             table.setWidthPercentage(100);
-            table.setWidths(new float[]{0.5f, 3f, 1f, 1.2f});
+            table.setWidths(new float[]{0.5f, 4f, 1.5f});
             table.setSpacingAfter(15);
 
             table.addCell(createTableHeader("N°", fBold));
             table.addCell(createTableHeader("DÉSIGNATION", fBold));
-            table.addCell(createTableHeader("QUANTITÉ", fBold));
             table.addCell(createTableHeader("MONTANT HT", fBold));
 
             int i = 1;
             for (LigneCommandeResponseDto l : dto.getLignes()) {
                 table.addCell(createTableCell(String.valueOf(i++), fNormal, Element.ALIGN_CENTER));
                 table.addCell(createTableCell(l.getDesign(), fNormal, Element.ALIGN_LEFT));
-                table.addCell(createTableCell("1", fNormal, Element.ALIGN_CENTER));
                 table.addCell(createTableCell(format(l.getBaseHT()) + " FCFA", fNormal, Element.ALIGN_RIGHT));
             }
 
             doc.add(table);
+
 
             // ===============================
             // 🔵 RÉCAPITULATIF HORIZONTAL
