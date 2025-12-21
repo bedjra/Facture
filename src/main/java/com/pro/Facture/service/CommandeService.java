@@ -145,9 +145,10 @@ public class CommandeService {
                 .collect(Collectors.toList());
     }
 
+
     // ----------------------------
-// GET ONE COMMAND BY ID
-// ----------------------------
+    // GET ONE COMMAND BY ID
+    // ----------------------------
     public CommandeResponseDto getById(Long id) {
         // Récupérer la commande
         Commande cmd = commandeRepository.findById(id)
@@ -168,11 +169,12 @@ public class CommandeService {
         // Générer le PDF et le convertir en Base64
         byte[] pdfBytes = commandePdfService.genererPdf(dto, place);
         String pdfBase64 = Base64.getEncoder().encodeToString(pdfBytes);
-//        dto.setPdfBase64(pdfBase64);
+
+        // ✅ CORRECTION : Activer l'ajout du PDF au DTO
+        dto.setPdfBase64(pdfBase64);
 
         return dto;
     }
-
 
 
     // ----------------------------

@@ -14,6 +14,7 @@ public class CommandeResponseDto {
     private LocalDate dateFacture;
 
     private ClientDto client;
+    private String pdfBase64;
 
 //    private List<LigneCommandeResponseDto> lignes;
 private List<LigneCommandeResponseDto> lignes = new ArrayList<>();
@@ -25,6 +26,7 @@ private List<LigneCommandeResponseDto> lignes = new ArrayList<>();
     private Double totalTTC;
     private Double totalAvance;
     private Double totalNetAPayer;
+
 
 
 }
