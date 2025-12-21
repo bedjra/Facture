@@ -1,5 +1,7 @@
 package com.pro.Facture.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pro.Facture.Dto.*;
 import com.pro.Facture.Entity.Client;
 import com.pro.Facture.Entity.Commande;
@@ -11,6 +13,7 @@ import com.pro.Facture.service.Pdf.CommandePdfService;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,6 +25,7 @@ public class CommandeService {
     private final ClientRepository clientRepository;
     private final CommandePdfService commandePdfService;
     private final PlaceRepository placeRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper(); // JSON mapper
 
     public CommandeService(CommandeRepository commandeRepository,
                            ClientRepository clientRepository,
@@ -37,75 +41,62 @@ public class CommandeService {
     // ----------------------------
     // CREATE FACTURE
     // ----------------------------
-
     public CommandeResponseDto createCommande(CommandeRequestDto dto) {
 
-        // Récupération client
         Client client = clientRepository.findById(dto.getClientId())
                 .orElseThrow(() -> new RuntimeException("Client introuvable"));
 
         double totalBaseHT = 0.0;
         List<LigneCommandeResponseDto> lignes = new ArrayList<>();
 
-        // ----------------------------
-        // Calcul des lignes
-        // ----------------------------
         for (LigneCommandeDto l : dto.getLignes()) {
-
             double base = l.getHt();
             totalBaseHT += base;
 
             LigneCommandeResponseDto res = new LigneCommandeResponseDto();
             res.setDesign(l.getDesign());
             res.setBaseHT(base);
-
             lignes.add(res);
         }
 
-        // ----------------------------
-        // Calculs globaux (CORRECTS)
-        // ----------------------------
         double totalRetenue = totalBaseHT * (dto.getRetenue() / 100);
-        double totalMT = totalBaseHT - totalRetenue;      // MT
-        double totalTva = totalBaseHT * 0.18;             // TVA sur BASE
-        double totalTTC = totalMT + totalTva;             // MT + TVA
+        double totalMT = totalBaseHT - totalRetenue;
+        double totalTva = totalBaseHT * 0.18;
+        double totalTTC = totalMT + totalTva;
         double totalNetAPayer = totalTTC - dto.getAvance();
 
-        // ----------------------------
-        // Sauvegarde commande
-        // ----------------------------
         Commande commande = new Commande();
         commande.setClient(client);
         commande.setDateFacture(dto.getDateFacture());
-
         commande.setDesign("FACTURE MULTI-LIGNES");
         commande.setHt(totalBaseHT);
         commande.setRetenue(totalRetenue);
-        commande.setMt(totalMT);            // ✅ ICI
+        commande.setMt(totalMT);
         commande.setTva(totalTva);
         commande.setMtTtc(totalTTC);
         commande.setAvance(dto.getAvance());
         commande.setNet(totalNetAPayer);
 
-        // Save initial
-        Commande saved = commandeRepository.save(commande);
+        // Stocker les lignes en JSON
+        try {
+            String lignesJson = objectMapper.writeValueAsString(dto.getLignes());
+            commande.setLignesJson(lignesJson);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Erreur conversion lignes en JSON");
+        }
 
-        // Génération REF
+        Commande saved = commandeRepository.save(commande);
         saved.setRef(generateRef(saved.getId()));
         commandeRepository.save(saved);
 
-        // ----------------------------
-        // Construction réponse
-        // ----------------------------
         CommandeResponseDto response = new CommandeResponseDto();
         response.setRef(saved.getRef());
         response.setDateFacture(saved.getDateFacture());
         response.setClient(mapClient(client));
         response.setLignes(lignes);
-
         response.setTotalBaseHT(totalBaseHT);
         response.setTotalRetenue(totalRetenue);
-        response.setTotalHTNet(totalMT);    // ✅ MT
+        response.setTotalHTNet(totalMT);
         response.setTotalTva(totalTva);
         response.setTotalTTC(totalTTC);
         response.setTotalAvance(dto.getAvance());
@@ -114,16 +105,10 @@ public class CommandeService {
         return response;
     }
 
-    // ----------------------------
-    // REFERENCE AUTO "00001"
-    // ----------------------------
     private String generateRef(Long id) {
         return String.format("ref-%05d", id);
     }
 
-    // ----------------------------
-    // MAP CLIENT
-    // ----------------------------
     private ClientDto mapClient(Client client) {
         ClientDto c = new ClientDto();
         c.setId(client.getId());
@@ -134,10 +119,9 @@ public class CommandeService {
         return c;
     }
 
-
     // ----------------------------
-// GET ALL COMMANDES
-// ----------------------------
+    // GET ALL COMMANDES
+    // ----------------------------
     public List<CommandeResponseDto> getAll() {
         return commandeRepository.findAll()
                 .stream()
@@ -145,20 +129,27 @@ public class CommandeService {
                 .collect(Collectors.toList());
     }
 
-
     // ----------------------------
     // GET ONE COMMAND BY ID
     // ----------------------------
     public CommandeResponseDto getById(Long id) {
-        // Récupérer la commande
         Commande cmd = commandeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Commande introuvable"));
 
         // Mapper la commande vers le DTO
         CommandeResponseDto dto = mapCommandeToDto(cmd);
 
-        // S'assurer que la liste lignes n'est jamais null
-        if (dto.getLignes() == null) {
+        // Charger les lignes depuis JSON
+        if (cmd.getLignesJson() != null) {
+            try {
+                List<LigneCommandeResponseDto> lignes = Arrays.asList(
+                        new ObjectMapper().readValue(cmd.getLignesJson(), LigneCommandeResponseDto[].class)
+                );
+                dto.setLignes(lignes);
+            } catch (Exception e) {
+                dto.setLignes(new ArrayList<>());
+            }
+        } else {
             dto.setLignes(new ArrayList<>());
         }
 
@@ -166,20 +157,18 @@ public class CommandeService {
         Place place = placeRepository.findFirstByOrderByIdAsc()
                 .orElseThrow(() -> new RuntimeException("Aucun Place trouvé"));
 
-        // Générer le PDF et le convertir en Base64
+        // Générer le PDF
         byte[] pdfBytes = commandePdfService.genererPdf(dto, place);
         String pdfBase64 = Base64.getEncoder().encodeToString(pdfBytes);
-
-        // ✅ CORRECTION : Activer l'ajout du PDF au DTO
         dto.setPdfBase64(pdfBase64);
 
-        return dto;
+        return dto; // <- ici on retourne le DTO avec les lignes correctement remplies
     }
 
 
     // ----------------------------
-// DELETE COMMAND BY ID
-// ----------------------------
+    // DELETE COMMAND BY ID
+    // ----------------------------
     public void deleteById(Long id) {
         if (!commandeRepository.existsById(id)) {
             throw new RuntimeException("Commande introuvable");
@@ -187,11 +176,8 @@ public class CommandeService {
         commandeRepository.deleteById(id);
     }
 
-
     private CommandeResponseDto mapCommandeToDto(Commande cmd) {
-
         CommandeResponseDto dto = new CommandeResponseDto();
-
         dto.setRef(cmd.getRef());
         dto.setDateFacture(cmd.getDateFacture());
         dto.setTotalBaseHT(cmd.getHt());
@@ -202,7 +188,6 @@ public class CommandeService {
         dto.setTotalAvance(cmd.getAvance());
         dto.setTotalNetAPayer(cmd.getNet());
 
-        // client
         if (cmd.getClient() != null) {
             dto.setClient(mapClient(cmd.getClient()));
         }
@@ -214,11 +199,9 @@ public class CommandeService {
     // GET 5 DERNIÈRES COMMANDES
     // ----------------------------
     public List<CommandeResponseDto> getLastFiveCommandes() {
-
         return commandeRepository.findTop3ByOrderByIdDesc()
                 .stream()
                 .map(this::mapCommandeToDto)
                 .collect(Collectors.toList());
     }
-
 }

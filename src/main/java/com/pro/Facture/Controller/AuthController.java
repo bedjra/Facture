@@ -10,6 +10,7 @@ import com.pro.Facture.service.AuthService;
 import com.pro.Facture.service.JwtService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -49,23 +50,23 @@ public class AuthController {
 
 
     @GetMapping("/info")
-    public UtilisateurCreateDto getUserInfo(@RequestHeader("Authorization") String authHeader) {
+    public UtilisateurDto getUserInfo(@RequestHeader("Authorization") String authHeader) {
 
-        // Enlever "Bearer "
+        // 1️⃣ Enlever "Bearer "
         String token = authHeader.substring(7);
 
-        // Extraire l'email depuis le token
+        // 2️⃣ Extraire l'email depuis le token
         String email = jwtService.extractEmail(token);
 
-        // Récupérer l'utilisateur dans la base
+        // 3️⃣ Récupérer l'utilisateur dans la base
         Utilisateur utilisateur = utilisateurRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
 
-        // On remplit ton DTO
-        UtilisateurCreateDto dto = new UtilisateurCreateDto();
+        // 4️⃣ Remplir le DTO avec ID, email et rôle
+        UtilisateurDto dto = new UtilisateurDto();
+        dto.setId(utilisateur.getId());
         dto.setEmail(utilisateur.getEmail());
-        dto.setRole(String.valueOf(utilisateur.getRole()));
-        dto.setPassword(null); // jamais envoyer le mot de passe
+        dto.setRole(utilisateur.getRole());
 
         return dto;
     }
@@ -84,4 +85,12 @@ public class AuthController {
         return "Utilisateur supprimé avec succès !";
     }
 
+    // 🔹 Mettre à jour un utilisateur par ID
+    @PutMapping("/{id}")
+    public ResponseEntity<UtilisateurDto> updateUser(
+            @PathVariable Long id,
+            @RequestBody UtilisateurCreateDto dto) {
+        UtilisateurDto updatedUser = authService.updateUserById(id, dto);
+        return ResponseEntity.ok(updatedUser);
+    }
 }

@@ -76,4 +76,40 @@ public class AuthService {
         utilisateurRepository.deleteById(id);
     }
 
+    // 🔹 Mettre à jour un utilisateur par ID
+    public UtilisateurDto updateUserById(Long id, UtilisateurCreateDto dto) {
+        // 1️⃣ Récupérer l'utilisateur existant
+        Utilisateur utilisateur = utilisateurRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé"));
+
+        // 2️⃣ Mettre à jour l'email si fourni et non utilisé par un autre utilisateur
+        if (dto.getEmail() != null && !dto.getEmail().equals(utilisateur.getEmail())) {
+            if (utilisateurRepository.findByEmail(dto.getEmail()).isPresent()) {
+                throw new IllegalArgumentException("Email déjà utilisé");
+            }
+            utilisateur.setEmail(dto.getEmail());
+        }
+
+        // 3️⃣ Mettre à jour le mot de passe si fourni
+        if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+            utilisateur.setPassword(passwordEncoder.encode(dto.getPassword()));
+        }
+
+        // 4️⃣ Mettre à jour le rôle si fourni
+        if (dto.getRole() != null && !dto.getRole().isBlank()) {
+            try {
+                Role role = Role.valueOf(dto.getRole().toUpperCase());
+                utilisateur.setRole(role);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Rôle invalide");
+            }
+        }
+
+        // 5️⃣ Sauvegarder les modifications
+        Utilisateur updatedUser = utilisateurRepository.save(utilisateur);
+
+        // 6️⃣ Retourner le DTO
+        return convertToDTO(updatedUser);
+    }
+
 }
