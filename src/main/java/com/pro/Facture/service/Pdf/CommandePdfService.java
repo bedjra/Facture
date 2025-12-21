@@ -8,10 +8,19 @@ import com.pro.Facture.Entity.Place;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.format.DateTimeFormatter;
 
 @Service
 public class CommandePdfService {
+
+    // ===============================
+    // 📁 DOSSIER DE STOCKAGE PDF - CHEMIN RELATIF
+    // ===============================
+    private static final String PDF_BASE_FOLDER = "pdfFactures/";
 
     // ===============================
     // 🎨 COULEURS PROFESSIONNELLES
@@ -199,12 +208,12 @@ public class CommandePdfService {
             conditions.setWidthPercentage(100);
             conditions.setSpacingAfter(12);
 
-// ===== TABLE INTERNE (2 COLONNES) =====
+            // ===== TABLE INTERNE (2 COLONNES) =====
             PdfPTable lineTable = new PdfPTable(2);
             lineTable.setWidthPercentage(100);
             lineTable.setWidths(new float[]{3f, 2f});
 
-// ---- GAUCHE
+            // ---- GAUCHE
             PdfPCell leftCell = new PdfPCell();
             leftCell.setBorder(Rectangle.NO_BORDER);
             leftCell.setPadding(0);
@@ -216,7 +225,7 @@ public class CommandePdfService {
             leftCell.addElement(left);
             lineTable.addCell(leftCell);
 
-// ---- DROITE
+            // ---- DROITE
             PdfPCell rightCell = new PdfPCell();
             rightCell.setBorder(Rectangle.NO_BORDER);
             rightCell.setPadding(0);
@@ -230,7 +239,7 @@ public class CommandePdfService {
             rightCell.addElement(right);
             lineTable.addCell(rightCell);
 
-// ===== CELLULE PRINCIPALE ENCADRÉE =====
+            // ===== CELLULE PRINCIPALE ENCADRÉE =====
             PdfPCell mainLine = new PdfPCell(lineTable);
             mainLine.setBorder(Rectangle.BOX);
             mainLine.setBorderColor(TABLE_BORDER);
@@ -238,7 +247,7 @@ public class CommandePdfService {
 
             conditions.addCell(mainLine);
 
-// ===== LIGNE EN DESSOUS =====
+            // ===== LIGNE EN DESSOUS =====
             PdfPCell amountLine = new PdfPCell();
             amountLine.setBorder(Rectangle.NO_BORDER);
             amountLine.setPaddingTop(6);
@@ -253,7 +262,6 @@ public class CommandePdfService {
                             + " FCFA)",
                     fBold
             );
-
 
             amountLine.addElement(amountText);
             conditions.addCell(amountLine);
@@ -293,8 +301,20 @@ public class CommandePdfService {
 
             doc.close();
 
+            // ===============================
+            // 💾 SAUVEGARDE SUR DISQUE
+            // ===============================
+            String folder = PDF_BASE_FOLDER + place.getNom().replaceAll("[^a-zA-Z0-9]", "_") + "/";
+            Files.createDirectories(Paths.get(folder));
+
+            String fileName = "FACTURE_" + dto.getRef() + ".pdf";
+
+            try (FileOutputStream fos = new FileOutputStream(folder + fileName)) {
+                fos.write(out.toByteArray());
+            }
+
         } catch (Exception e) {
-            throw new RuntimeException("Erreur PDF : " + e.getMessage());
+            throw new RuntimeException("Erreur génération PDF : " + e.getMessage(), e);
         }
 
         return out.toByteArray();
@@ -393,7 +413,7 @@ public class CommandePdfService {
 
         // 🔹 Ligne 1 – Activités (GRAS)
         Paragraph l1 = new Paragraph(
-                "Audit, Assistance Comptable, fiscale et Sociale - Travaux d’inventaire, "
+                "Audit, Assistance Comptable, fiscale et Sociale - Travaux d'inventaire, "
                         + "Gestion des Salaires - Conseils et Formations",
                 boldSmall
         );

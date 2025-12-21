@@ -64,7 +64,7 @@ public class AuthController {
         // On remplit ton DTO
         UtilisateurCreateDto dto = new UtilisateurCreateDto();
         dto.setEmail(utilisateur.getEmail());
-        dto.setRole(utilisateur.getRole());
+        dto.setRole(String.valueOf(utilisateur.getRole()));
         dto.setPassword(null); // jamais envoyer le mot de passe
 
         return dto;

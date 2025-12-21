@@ -146,8 +146,8 @@ public class CommandeService {
     }
 
     // ----------------------------
-    // GET ONE COMMAND BY ID
-    // ----------------------------
+// GET ONE COMMAND BY ID
+// ----------------------------
     public CommandeResponseDto getById(Long id) {
         // Récupérer la commande
         Commande cmd = commandeRepository.findById(id)
@@ -156,9 +156,14 @@ public class CommandeService {
         // Mapper la commande vers le DTO
         CommandeResponseDto dto = mapCommandeToDto(cmd);
 
+        // S'assurer que la liste lignes n'est jamais null
+        if (dto.getLignes() == null) {
+            dto.setLignes(new ArrayList<>());
+        }
+
+        // Récupérer le premier Place
         Place place = placeRepository.findFirstByOrderByIdAsc()
                 .orElseThrow(() -> new RuntimeException("Aucun Place trouvé"));
-
 
         // Générer le PDF et le convertir en Base64
         byte[] pdfBytes = commandePdfService.genererPdf(dto, place);
@@ -167,6 +172,7 @@ public class CommandeService {
 
         return dto;
     }
+
 
 
     // ----------------------------

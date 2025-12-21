@@ -3,6 +3,7 @@ package com.pro.Facture.service;
 import com.pro.Facture.Dto.UtilisateurCreateDto;
 import com.pro.Facture.Dto.UtilisateurDto;
 import com.pro.Facture.Entity.Utilisateur;
+import com.pro.Facture.enums.Role;
 import com.pro.Facture.repository.UtilisateurRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,21 +21,30 @@ public class AuthService {
 
     // 🔹 Créer un utilisateur
     public UtilisateurDto register(UtilisateurCreateDto dto) {
-        // Vérifie si l'email existe déjà
         if (utilisateurRepository.findByEmail(dto.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Email déjà utilisé");
+        }
+
+        // 🔹 Convertit la String en Enum
+        Role role;
+        try {
+            role = Role.valueOf(dto.getRole().toUpperCase());
+            // toUpperCase pour éviter problème "cptr" vs "CPTR"
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Rôle invalide");
         }
 
         Utilisateur utilisateur = new Utilisateur(
                 dto.getEmail(),
                 passwordEncoder.encode(dto.getPassword()),
-                dto.getRole()
+                role
         );
 
         Utilisateur savedUser = utilisateurRepository.save(utilisateur);
 
         return convertToDTO(savedUser);
     }
+
 
     // 🔹 Récupérer un utilisateur par email
     public UtilisateurDto getByEmail(String email) {
@@ -57,7 +67,7 @@ public class AuthService {
         UtilisateurDto dto = new UtilisateurDto();
         dto.setId(utilisateur.getId());
         dto.setEmail(utilisateur.getEmail());
-        dto.setRole(utilisateur.getRole());
+        dto.setRole(Role.valueOf(String.valueOf(utilisateur.getRole())));
         return dto;
 
     }
