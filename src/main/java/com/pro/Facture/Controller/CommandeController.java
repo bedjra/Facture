@@ -2,6 +2,7 @@ package com.pro.Facture.Controller;
 
 import com.pro.Facture.Dto.CommandeRequestDto;
 import com.pro.Facture.Dto.CommandeResponseDto;
+import com.pro.Facture.Dto.PaiementCommandeDto;
 import com.pro.Facture.Entity.Place;
 import com.pro.Facture.service.CommandeService;
 import com.pro.Facture.service.DashboardService;
@@ -66,8 +67,11 @@ public class CommandeController {
 
 
     @GetMapping("/{id}")
-    public CommandeResponseDto getById(@PathVariable Long id) {
-        return commandeService.getById(id);
+    public ResponseEntity<CommandeResponseDto> getCommandeById(
+            @PathVariable Long id
+    ) {
+        CommandeResponseDto dto = commandeService.getById(id);
+        return ResponseEntity.ok(dto);
     }
 
     @DeleteMapping("/{id}")
@@ -75,6 +79,15 @@ public class CommandeController {
         commandeService.deleteById(id);
         return "Commande supprimée avec succès";
     }
+
+
+    @PostMapping("/paie")
+    public CommandeResponseDto ajouterPaiement(
+            @RequestBody PaiementCommandeDto dto
+    ) {
+        return commandeService.ajouterPaiement(dto);
+    }
+
 
 
     @GetMapping("/last")

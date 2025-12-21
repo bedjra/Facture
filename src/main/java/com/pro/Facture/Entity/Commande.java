@@ -40,6 +40,8 @@ public class Commande {
 
     private LocalDate dateFacture;
 
+    @Column(length = 20)
+    private String statut;
 
     public Commande() {}
 

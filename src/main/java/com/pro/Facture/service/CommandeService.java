@@ -90,6 +90,7 @@ public class CommandeService {
         commandeRepository.save(saved);
 
         CommandeResponseDto response = new CommandeResponseDto();
+        response.setId(Math.toIntExact(saved.getId())); // ✅
         response.setRef(saved.getRef());
         response.setDateFacture(saved.getDateFacture());
         response.setClient(mapClient(client));
@@ -101,6 +102,7 @@ public class CommandeService {
         response.setTotalTTC(totalTTC);
         response.setTotalAvance(dto.getAvance());
         response.setTotalNetAPayer(totalNetAPayer);
+
 
         return response;
     }
@@ -136,33 +138,15 @@ public class CommandeService {
         Commande cmd = commandeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Commande introuvable"));
 
-        // Mapper la commande vers le DTO
         CommandeResponseDto dto = mapCommandeToDto(cmd);
 
-        // Charger les lignes depuis JSON
-        if (cmd.getLignesJson() != null) {
-            try {
-                List<LigneCommandeResponseDto> lignes = Arrays.asList(
-                        new ObjectMapper().readValue(cmd.getLignesJson(), LigneCommandeResponseDto[].class)
-                );
-                dto.setLignes(lignes);
-            } catch (Exception e) {
-                dto.setLignes(new ArrayList<>());
-            }
-        } else {
-            dto.setLignes(new ArrayList<>());
-        }
-
-        // Récupérer le premier Place
         Place place = placeRepository.findFirstByOrderByIdAsc()
                 .orElseThrow(() -> new RuntimeException("Aucun Place trouvé"));
 
-        // Générer le PDF
         byte[] pdfBytes = commandePdfService.genererPdf(dto, place);
-        String pdfBase64 = Base64.getEncoder().encodeToString(pdfBytes);
-        dto.setPdfBase64(pdfBase64);
+        dto.setPdfBase64(Base64.getEncoder().encodeToString(pdfBytes));
 
-        return dto; // <- ici on retourne le DTO avec les lignes correctement remplies
+        return dto;
     }
 
 
@@ -178,6 +162,10 @@ public class CommandeService {
 
     private CommandeResponseDto mapCommandeToDto(Commande cmd) {
         CommandeResponseDto dto = new CommandeResponseDto();
+
+        // ✅ ID réel
+        dto.setId(Math.toIntExact(cmd.getId()));
+
         dto.setRef(cmd.getRef());
         dto.setDateFacture(cmd.getDateFacture());
         dto.setTotalBaseHT(cmd.getHt());
@@ -192,6 +180,31 @@ public class CommandeService {
             dto.setClient(mapClient(cmd.getClient()));
         }
 
+        // ✅ Charger les lignes JSON ICI AUSSI
+        if (cmd.getLignesJson() != null && !cmd.getLignesJson().isEmpty()) {
+            try {
+                List<LigneCommandeDto> lignesDto =
+                        Arrays.asList(objectMapper.readValue(
+                                cmd.getLignesJson(),
+                                LigneCommandeDto[].class
+                        ));
+
+                // conversion vers ResponseDto
+                List<LigneCommandeResponseDto> lignes = lignesDto.stream().map(l -> {
+                    LigneCommandeResponseDto r = new LigneCommandeResponseDto();
+                    r.setDesign(l.getDesign());
+                    r.setBaseHT(l.getHt());
+                    return r;
+                }).toList();
+
+                dto.setLignes(lignes);
+            } catch (Exception e) {
+                dto.setLignes(new ArrayList<>());
+            }
+        } else {
+            dto.setLignes(new ArrayList<>());
+        }
+
         return dto;
     }
 
@@ -204,4 +217,58 @@ public class CommandeService {
                 .map(this::mapCommandeToDto)
                 .collect(Collectors.toList());
     }
+
+
+
+    // ----------------------------
+// AJOUT PAIEMENT (FACTURE MPE)
+// ----------------------------
+    public CommandeResponseDto ajouterPaiement(PaiementCommandeDto dto) {
+
+        Commande commande = commandeRepository.findById(dto.getCommandeId())
+                .orElseThrow(() -> new RuntimeException("Commande introuvable"));
+
+        if ("SOLDEE".equals(commande.getStatut())) {
+            throw new RuntimeException("Cette facture est déjà soldée");
+        }
+
+        double ancienneAvance = commande.getAvance();
+        double mtTtc = commande.getMtTtc();
+        double montantPaye = dto.getMontantPaye();
+
+        if (montantPaye <= 0) {
+            throw new RuntimeException("Montant invalide");
+        }
+
+        double nouvelleAvance = ancienneAvance + montantPaye;
+        double nouveauNet = mtTtc - nouvelleAvance;
+
+        if (nouveauNet < 0) {
+            throw new RuntimeException("Le montant payé dépasse le reste à payer");
+        }
+
+        commande.setAvance(nouvelleAvance);
+        commande.setNet(nouveauNet);
+
+        if (nouveauNet == 0) {
+            commande.setStatut("PAYEE");
+        } else {
+            commande.setStatut("IMPAYEE");
+        }
+
+        Commande saved = commandeRepository.save(commande);
+
+        // 🔁 DTO mis à jour
+        CommandeResponseDto response = mapCommandeToDto(saved);
+
+        // 🔁 PDF MIS À JOUR
+        Place place = placeRepository.findFirstByOrderByIdAsc()
+                .orElseThrow(() -> new RuntimeException("Aucun Place trouvé"));
+
+        byte[] pdfBytes = commandePdfService.genererPdf(response, place);
+        response.setPdfBase64(Base64.getEncoder().encodeToString(pdfBytes));
+
+        return response;
+    }
+
 }
