@@ -61,7 +61,10 @@ public class CommandeService {
 
         double totalRetenue = totalBaseHT * (dto.getRetenue() / 100);
         double totalMT = totalBaseHT - totalRetenue;
-        double totalTva = totalBaseHT * 0.18;
+
+        double tauxTva = dto.getTauxTva() != null ? dto.getTauxTva() : 0.0;
+
+        double totalTva = totalMT * (tauxTva / 100);
         double totalTTC = totalMT + totalTva;
         double totalNetAPayer = totalTTC - dto.getAvance();
 
@@ -72,7 +75,7 @@ public class CommandeService {
         commande.setHt(totalBaseHT);
         commande.setRetenue(totalRetenue);
         commande.setMt(totalMT);
-        commande.setTva(totalTva);
+        commande.setTva(tauxTva);
         commande.setMtTtc(totalTTC);
         commande.setAvance(dto.getAvance());
         commande.setNet(totalNetAPayer);

@@ -10,9 +10,18 @@ public class CommandeRequestDto {
     private Double retenue;      // % Retenue à source
     private Double avance;
     private List<LigneCommandeDto> lignes;
+    private Double tauxTva;
 
     public Long getClientId() {
         return clientId;
+    }
+
+    public Double getTauxTva() {
+        return tauxTva;
+    }
+
+    public void setTauxTva(Double tauxTva) {
+        this.tauxTva = tauxTva;
     }
 
     public void setClientId(Long clientId) {
