@@ -46,6 +46,16 @@ public class RecuDto {
         this.motif = motif;
     }
 
+    private UtilisateurDto utilisateur;
+
+    public UtilisateurDto getUtilisateur() {
+        return utilisateur;
+    }
+
+    public void setUtilisateur(UtilisateurDto utilisateur) {
+        this.utilisateur = utilisateur;
+    }
+
     // =========================
     // Getters & Setters
     // =========================

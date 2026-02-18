@@ -96,17 +96,17 @@ public class CommandeController {
     }
 
 
-    @GetMapping("/facturé")
+    @GetMapping("/facture")
     public Map<String, Object> totalFacture() {
         return dashService.getTotalFacture();
     }
 
-    @GetMapping("/payé")
+    @GetMapping("/paye")
     public Map<String, Object> totalPaye() {
         return dashService.getTotalPaye();
     }
 
-    @GetMapping("/impayé")
+    @GetMapping("/impaye")
     public Map<String, Object> totalImpaye() {
         return dashService.getTotalImpaye();
     }

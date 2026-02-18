@@ -27,6 +27,10 @@ private List<LigneCommandeResponseDto> lignes = new ArrayList<>();
     private Double totalAvance;
     private Double totalNetAPayer;
 
+    private UtilisateurDto utilisateur;
+
+
+
 
 
 }

@@ -48,6 +48,10 @@ public class Commande {
     @Column(columnDefinition = "TEXT") // ou LONGTEXT selon MySQL
     private String lignesJson;
 
+    @ManyToOne
+    @JoinColumn(name = "utilisateur_id")
+    private Utilisateur utilisateur;
+
     // Getters & Setters
     // ...
 

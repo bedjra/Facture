@@ -6,10 +6,16 @@ import com.pro.Facture.Dto.*;
 import com.pro.Facture.Entity.Client;
 import com.pro.Facture.Entity.Commande;
 import com.pro.Facture.Entity.Place;
+import com.pro.Facture.Entity.Utilisateur;
 import com.pro.Facture.repository.ClientRepository;
 import com.pro.Facture.repository.CommandeRepository;
 import com.pro.Facture.repository.PlaceRepository;
+import com.pro.Facture.repository.UtilisateurRepository;
 import com.pro.Facture.service.Pdf.CommandePdfService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -25,17 +31,19 @@ public class CommandeService {
     private final ClientRepository clientRepository;
     private final CommandePdfService commandePdfService;
     private final PlaceRepository placeRepository;
+    private final UtilisateurRepository utilisateurRepository;
     private final ObjectMapper objectMapper = new ObjectMapper(); // JSON mapper
 
     public CommandeService(CommandeRepository commandeRepository,
                            ClientRepository clientRepository,
                            CommandePdfService commandePdfService,
-                           PlaceRepository placeRepository) {
+                           PlaceRepository placeRepository, UtilisateurRepository utilisateurRepository) {
 
         this.commandeRepository = commandeRepository;
         this.clientRepository = clientRepository;
         this.commandePdfService = commandePdfService;
         this.placeRepository = placeRepository;
+        this.utilisateurRepository = utilisateurRepository;
     }
 
     // ----------------------------
@@ -43,9 +51,33 @@ public class CommandeService {
     // ----------------------------
     public CommandeResponseDto createCommande(CommandeRequestDto dto) {
 
+        // 🔹 Récupération du client
         Client client = clientRepository.findById(dto.getClientId())
                 .orElseThrow(() -> new RuntimeException("Client introuvable"));
 
+        // 🔐 Récupération utilisateur connecté
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            throw new RuntimeException("Utilisateur non connecté");
+        }
+
+        // Récupérer l'email depuis le principal
+        String email;
+        if (auth.getPrincipal() instanceof UserDetails userDetails) {
+            email = userDetails.getUsername(); // normalement c'est l'email
+        } else if (auth.getPrincipal() instanceof String s) {
+            email = s; // parfois JWT met juste l'email comme String
+        } else {
+            throw new RuntimeException("Impossible de récupérer l'utilisateur");
+        }
+
+        // Charger l'utilisateur depuis la base
+        Utilisateur user = utilisateurRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+        // 🔹 Calcul des totaux
         double totalBaseHT = 0.0;
         List<LigneCommandeResponseDto> lignes = new ArrayList<>();
 
@@ -61,15 +93,15 @@ public class CommandeService {
 
         double totalRetenue = totalBaseHT * (dto.getRetenue() / 100);
         double totalMT = totalBaseHT - totalRetenue;
-
         double tauxTva = dto.getTauxTva() != null ? dto.getTauxTva() : 0.0;
-
         double totalTva = totalMT * (tauxTva / 100);
         double totalTTC = totalMT + totalTva;
         double totalNetAPayer = totalTTC - dto.getAvance();
 
+        // 🔹 Création de la commande
         Commande commande = new Commande();
         commande.setClient(client);
+        commande.setUtilisateur(user); // important
         commande.setDateFacture(dto.getDateFacture());
         commande.setDesign("FACTURE MULTI-LIGNES");
         commande.setHt(totalBaseHT);
@@ -88,12 +120,14 @@ public class CommandeService {
             throw new RuntimeException("Erreur conversion lignes en JSON");
         }
 
+        // 💾 Sauvegarde
         Commande saved = commandeRepository.save(commande);
         saved.setRef(generateRef(saved.getId()));
         commandeRepository.save(saved);
 
+        // 📦 Construction de la réponse
         CommandeResponseDto response = new CommandeResponseDto();
-        response.setId(Math.toIntExact(saved.getId())); // ✅
+        response.setId(Math.toIntExact(saved.getId()));
         response.setRef(saved.getRef());
         response.setDateFacture(saved.getDateFacture());
         response.setClient(mapClient(client));
@@ -106,6 +140,8 @@ public class CommandeService {
         response.setTotalAvance(dto.getAvance());
         response.setTotalNetAPayer(totalNetAPayer);
 
+        // Ajouter utilisateur dans la réponse
+        response.setUtilisateur(mapUtilisateur(user));
 
         return response;
     }
@@ -122,6 +158,14 @@ public class CommandeService {
         c.setTelephone(client.getTelephone());
         c.setAdresse(client.getAdresse());
         return c;
+    }
+
+    private UtilisateurDto mapUtilisateur(Utilisateur user) {
+        UtilisateurDto dto = new UtilisateurDto();
+        dto.setId(user.getId());
+        dto.setEmail(user.getEmail());
+        dto.setRole(user.getRole());
+        return dto;
     }
 
     // ----------------------------
@@ -207,6 +251,10 @@ public class CommandeService {
         } else {
             dto.setLignes(new ArrayList<>());
         }
+        if (cmd.getUtilisateur() != null) {
+            dto.setUtilisateur(mapUtilisateur(cmd.getUtilisateur()));
+        }
+
 
         return dto;
     }

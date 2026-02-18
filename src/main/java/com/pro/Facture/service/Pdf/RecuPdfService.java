@@ -6,10 +6,12 @@ import com.itextpdf.kernel.colors.DeviceGray;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.pdf.canvas.draw.SolidLine;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.borders.SolidBorder;
 import com.itextpdf.layout.element.*;
+import com.itextpdf.layout.properties.HorizontalAlignment;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.itextpdf.layout.properties.VerticalAlignment;
@@ -66,42 +68,49 @@ public class RecuPdfService {
     // =========================================================
     private void buildRecuBlock(Document document, Place place, Recu recu) throws Exception {
 
-        // ── TITRE ──────────────────────────────────────────────
-        document.add(new Paragraph("CABINET D'EXPERTISE COMPTABLE")
+        // Titre principal
+        Text titrePrincipal = new Text("CFACI GROUP CONSULTING\n")
                 .setBold()
-                .setFontSize(15)
+                .setFontSize(26)
+                .setFontColor(ColorConstants.DARK_GRAY);
+
+// Description
+        Text description = new Text("Cabinet d'expertise comptable et d'audit")
+                .setFontSize(12)
+                .setFontColor(ColorConstants.BLACK);
+
+// Paragraphe contenant titre + description
+        Paragraph titre = new Paragraph()
+                .add(titrePrincipal)
+                .add(description)
                 .setTextAlignment(TextAlignment.CENTER)
-                .setMarginBottom(8));
+                .setMarginBottom(5)  // petit espace avant le reste
+                .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 1f)) // ligne sous le texte
+                .setPaddingBottom(3); // un petit espace entre texte et ligne
+
+        document.add(titre);
+
+
 
         // ── HEADER : [logo + nom cabinet]  |  [DATE / PIÈCE / MONTANT] ──
         Table header = new Table(UnitValue.createPercentArray(new float[]{55, 45}))
                 .setWidth(UnitValue.createPercentValue(100))
                 .setMarginBottom(8);
 
-        // Colonne gauche : logo + nom
+        // Colonne gauche : logo
         Cell leftCell = new Cell().setBorder(Border.NO_BORDER).setPadding(0);
 
         if (place.getLogo() != null && place.getLogo().length > 0) {
             try {
                 Image logo = new Image(ImageDataFactory.create(place.getLogo()))
-                        .setWidth(55)
-                        .setHeight(55);
-                Table logoRow = new Table(UnitValue.createPercentArray(new float[]{35, 65}))
-                        .setWidth(UnitValue.createPercentValue(100));
-                logoRow.addCell(new Cell().setBorder(Border.NO_BORDER).add(logo));
-                logoRow.addCell(new Cell().setBorder(Border.NO_BORDER)
-                        .add(new Paragraph(place.getNom() != null ? place.getNom() : "")
-                                .setBold().setFontSize(10).setItalic())
-                        .setVerticalAlignment(VerticalAlignment.MIDDLE));
-                leftCell.add(logoRow);
+                        .setWidth(100)   // agrandi
+                        .setHeight(100); // agrandi
+                leftCell.add(logo);
             } catch (Exception ignored) {
-                leftCell.add(new Paragraph(place.getNom() != null ? place.getNom() : "")
-                        .setBold().setFontSize(11));
+                // rien si le logo échoue
             }
-        } else {
-            leftCell.add(new Paragraph(place.getNom() != null ? place.getNom() : "")
-                    .setBold().setFontSize(11));
         }
+
         header.addCell(leftCell);
 
         // Colonne droite : DATE / PIÈCE DE CAISSE N° / MONTANT

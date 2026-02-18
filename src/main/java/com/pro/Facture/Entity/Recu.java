@@ -2,10 +2,12 @@ package com.pro.Facture.Entity;
 
 import com.pro.Facture.enums.ModePaiement;
 import jakarta.persistence.*;
+import lombok.Data;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-
+@Data
 @Entity
 @Table(name = "recu")
 public class Recu {
@@ -14,7 +16,7 @@ public class Recu {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "numero_piece", nullable = false, unique = true)
+    @Column(name = "numero_piece", nullable = false)
     private String numeroPiece;
 
     @Column(nullable = false)
@@ -37,6 +39,10 @@ public class Recu {
     @ManyToOne
     @JoinColumn(name = "place_id") // colonne de jointure dans la table recu
     private Place place;
+
+    @ManyToOne
+    @JoinColumn(name = "utilisateur_id")
+    private Utilisateur utilisateur;
 
     // =========================
     // Constructeurs

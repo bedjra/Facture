@@ -1,10 +1,15 @@
 package com.pro.Facture.service;
 
 import com.pro.Facture.Dto.RecuDto;
+import com.pro.Facture.Dto.UtilisateurDto;
 import com.pro.Facture.Entity.Place;
 import com.pro.Facture.Entity.Recu;
+import com.pro.Facture.Entity.Utilisateur;
 import com.pro.Facture.repository.PlaceRepository;
 import com.pro.Facture.repository.RecuRepository;
+import com.pro.Facture.repository.UtilisateurRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,12 +19,13 @@ import java.util.stream.Collectors;
 public class RecuService {
 
     private final RecuRepository recuRepository;
-
+    private final UtilisateurRepository utilisateurRepository;
     private final PlaceRepository placeRepository;
 
 
-    public RecuService(RecuRepository recuRepository, PlaceRepository placeRepository) {
+    public RecuService(RecuRepository recuRepository, UtilisateurRepository utilisateurRepository, PlaceRepository placeRepository) {
         this.recuRepository = recuRepository;
+        this.utilisateurRepository = utilisateurRepository;
         this.placeRepository = placeRepository;
     }
 
@@ -27,8 +33,19 @@ public class RecuService {
     // CREATE
     // =========================
 
+
     public RecuDto create(RecuDto dto) {
+
         Recu recu = mapToEntity(dto);
+
+        // 🔐 Récupérer utilisateur connecté
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+
+        Utilisateur user = utilisateurRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+        recu.setUtilisateur(user); // ✅ Associer le user
 
         // ✅ Récupérer la première place et l'associer
         Place place = placeRepository.findFirstByOrderByIdAsc()
@@ -98,8 +115,21 @@ public class RecuService {
         dto.setMontantEncaisse(recu.getMontantEncaisse());
         dto.setMode(recu.getMode());
         dto.setMotif(recu.getMotif());
+        if (recu.getUtilisateur() != null) {
+            dto.setUtilisateur(mapUtilisateur(recu.getUtilisateur()));
+        }
+
         return dto;
     }
+
+    private UtilisateurDto mapUtilisateur(Utilisateur user) {
+        UtilisateurDto dto = new UtilisateurDto();
+        dto.setId(user.getId());
+        dto.setEmail(user.getEmail());
+        dto.setRole(user.getRole());
+        return dto;
+    }
+
 
     private Recu mapToEntity(RecuDto dto) {
         Recu recu = new Recu();
