@@ -1,6 +1,7 @@
 package com.pro.Facture.Controller;
 
 import com.pro.Facture.Dto.RecuDto;
+import com.pro.Facture.Entity.Recu;
 import com.pro.Facture.service.Pdf.RecuPdfService;
 import com.pro.Facture.service.RecuService;
 import org.springframework.http.ResponseEntity;
@@ -41,6 +42,17 @@ public class RecuController {
                 .body(pdf);
     }
 
+    @GetMapping("/pdf/{id}")
+    public ResponseEntity<byte[]> getPdf(@PathVariable Long id) {
+        byte[] pdf = recuPdfService.generatePdf(id);
+        RecuDto recu = recuService.getById(id); // pour récupérer le numeroPiece
+
+        return ResponseEntity.ok()
+                .header("Content-Disposition",
+                        "inline; filename=recu_" + recu.getNumeroPiece() + ".pdf")
+                .header("Content-Type", "application/pdf")
+                .body(pdf);
+    }
 
     // READ ALL
     @GetMapping
