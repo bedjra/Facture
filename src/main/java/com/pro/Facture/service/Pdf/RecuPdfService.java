@@ -25,6 +25,7 @@ import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Year;
 
 @Service
 public class RecuPdfService {
@@ -119,8 +120,8 @@ public class RecuPdfService {
         if (place.getLogo() != null && place.getLogo().length > 0) {
             try {
                 Image logo = new Image(ImageDataFactory.create(place.getLogo()))
-                        .setWidth(100)
-                        .setHeight(100);
+                        .setWidth(60)
+                        .setHeight(60);
                 leftCell.add(logo);
             } catch (Exception ignored) {}
         }
@@ -129,7 +130,13 @@ public class RecuPdfService {
         Cell rightCell = new Cell().setBorder(Border.NO_BORDER).setPadding(0)
                 .setVerticalAlignment(VerticalAlignment.MIDDLE);
         rightCell.add(labelValueRow("DATE :", recu.getDate() != null ? recu.getDate().toString() : ""));
-        rightCell.add(labelValueRow("PIÈCE DE CAISSE N° :", recu.getNumeroPiece() != null ? recu.getNumeroPiece() : ""));
+// ======= Génération du numéro de pièce =======
+        int compteur = Math.toIntExact(recu.getId() != null ? recu.getId() : 1); // ou tout compteur que tu utilises
+        String annee = String.valueOf(Year.now().getValue());   // année en cours
+        String numeroPieceFormat = String.format("%03d/CFACI/%s", compteur, annee);
+
+// Ajout dans la cellule
+        rightCell.add(labelValueRow("PIÈCE DE CAISSE N° :", numeroPieceFormat));
         rightCell.add(labelValueRow("MONTANT :", recu.getMontantEncaisse() != null ? recu.getMontantEncaisse() + " FCFA" : ""));
         header.addCell(rightCell);
 
@@ -137,32 +144,54 @@ public class RecuPdfService {
 
         // ── INFOS CABINET ──
         float s = 8.5f;
+        float labelValueSpacing = 4f;
+        float lineSpacing = 2f;
+// ACTIVITE
         document.add(new Paragraph()
-                .add(new Text("ACTIVITE : ").setBold().setUnderline().setFontSize(s))
-                .add(new Text("Audit, Assistance comptable, fiscale et sociale").setFontSize(s)));
-        document.add(new Paragraph()
-                .add(new Text("Travaux d'inventaire, Gestion des salaires-Conseils et Formation").setFontSize(s))
-                .setMarginTop(-3));
+                .add(new Text("ACTIVITE").setBold().setUnderline().setFontSize(s))
+                .add(new Text(" : ").setBold().setFontSize(s))  // espace hors du soulignement
+                .add(new Text("Audit, Assistance comptable, fiscale et sociale").setFontSize(s))
+                .setMultipliedLeading(1.2f));
 
         document.add(new Paragraph()
-                .add(new Text("SIEGE : ").setBold().setUnderline().setFontSize(s))
-                .add(new Text(place.getAdresse() != null ? place.getAdresse() : "").setFontSize(s)));
+                .add(new Text("Travaux d'inventaire, Gestion des salaires - Conseils et Formation").setFontSize(s))
+                .setMarginTop(0)
+                .setMarginBottom(lineSpacing));
 
-        String tels = (place.getTelephone() != null ? place.getTelephone() : "") +
-                (place.getCel() != null && !place.getCel().isEmpty() ? " / " + place.getCel() : "");
+// SIEGE
         document.add(new Paragraph()
-                .add(new Text("Tél : ").setBold().setUnderline().setFontSize(s))
-                .add(new Text(tels).setFontSize(s)));
+                .add(new Text("SIEGE").setBold().setUnderline().setFontSize(s))
+                .add(new Text(" : ").setBold().setFontSize(s))
+                .add(new Text(place.getAdresse() != null ? place.getAdresse() : "-").setFontSize(s))
+                .setMarginBottom(lineSpacing));
+
+// TEL
+        String telephone = place.getTelephone() != null ? place.getTelephone() : "";
+        String cel       = place.getCel() != null && !place.getCel().isEmpty() ? place.getCel() : "";
+        String tels      = !telephone.isEmpty() && !cel.isEmpty()
+                ? telephone + " / " + cel
+                : telephone + cel;
 
         document.add(new Paragraph()
-                .add(new Text("E-mail :").setBold().setUnderline().setFontSize(s))
-                .add(new Text(place.getEmail() != null ? place.getEmail() : "  ").setFontSize(s)));
+                .add(new Text("Tél").setBold().setUnderline().setFontSize(s))
+                .add(new Text(" : ").setBold().setFontSize(s))
+                .add(new Text(!tels.isEmpty() ? tels : "-").setFontSize(s))
+                .setMarginBottom(lineSpacing));
 
+// EMAIL
         document.add(new Paragraph()
-                .add(new Text("NIF :").setBold().setUnderline().setFontSize(s))
-                .add(new Text("  1 001 727 149").setFontSize(s))
+                .add(new Text("E-mail").setBold().setUnderline().setFontSize(s))
+                .add(new Text(" : ").setBold().setFontSize(s))
+                .add(new Text(place.getEmail() != null && !place.getEmail().isEmpty()
+                        ? place.getEmail() : "-").setFontSize(s))
+                .setMarginBottom(lineSpacing));
+
+// NIF
+        document.add(new Paragraph()
+                .add(new Text("NIF").setBold().setUnderline().setFontSize(s))
+                .add(new Text(" : ").setBold().setFontSize(s))
+                .add(new Text("1 001 727 149").setFontSize(s))
                 .setMarginBottom(10));
-
         // ── TABLEAU BÉNÉFICIAIRE / SOMME / MOTIF ──
         Table infoTable = new Table(UnitValue.createPercentArray(new float[]{1}))
                 .setWidth(UnitValue.createPercentValue(100))

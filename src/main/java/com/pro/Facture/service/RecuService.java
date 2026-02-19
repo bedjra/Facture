@@ -109,7 +109,6 @@ public class RecuService {
     private RecuDto mapToDto(Recu recu) {
         RecuDto dto = new RecuDto();
         dto.setId(recu.getId());
-        dto.setNumeroPiece(recu.getNumeroPiece());
         dto.setDate(recu.getDate());
         dto.setBeneficiaire(recu.getBeneficiaire());
         dto.setMontantEncaisse(recu.getMontantEncaisse());

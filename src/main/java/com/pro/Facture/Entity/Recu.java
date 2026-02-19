@@ -16,16 +16,14 @@ public class Recu {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "numero_piece", nullable = false)
+    @Column(name = "numero_piece")
     private String numeroPiece;
 
-    @Column(nullable = false)
     private LocalDate date;
 
-    @Column(nullable = false)
     private String beneficiaire;
 
-    @Column(name = "montant_encaisse", nullable = false, precision = 15, scale = 2)
+    @Column(name = "montant_encaisse", precision = 15, scale = 2)
     private BigDecimal montantEncaisse;
 
     @Enumerated(EnumType.STRING)

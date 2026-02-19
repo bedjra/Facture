@@ -147,7 +147,7 @@ public class CommandeService {
     }
 
     private String generateRef(Long id) {
-        return String.format("ref-%05d", id);
+        return String.format("%05d", id);
     }
 
     private ClientDto mapClient(Client client) {
