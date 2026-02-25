@@ -4,6 +4,7 @@ import com.pro.Facture.Entity.Commande;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface CommandeRepository extends JpaRepository<Commande, Long> {
@@ -54,5 +55,18 @@ public interface CommandeRepository extends JpaRepository<Commande, Long> {
       AND c.dateFacture < CURRENT_DATE
 """)
     long facturesEnRetard();
+
+
+
+    @Query("SELECT COUNT(c) FROM Commande c")
+    Long countFactures();
+
+    @Query("SELECT COALESCE(SUM(c.mtTtc), 0) FROM Commande c")
+    Double sumFactures();
+
+
+
+
+
 
 }

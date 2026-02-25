@@ -106,14 +106,38 @@ public class RecuService {
     // =========================
     // MAPPER
     // =========================
+
+
+
+    private Recu mapToEntity(RecuDto dto) {
+        Recu recu = new Recu();
+        recu.setId(dto.getId());
+        recu.setNumeroPiece(dto.getNumeroPiece());
+        recu.setDate(dto.getDate());
+        recu.setBeneficiaire(dto.getBeneficiaire());
+        recu.setMontantEncaisse(dto.getMontantEncaisse());
+        recu.setMode(dto.getMode());
+        recu.setMotif(dto.getMotif());
+        return recu;
+    }
+
+
+
     private RecuDto mapToDto(Recu recu) {
         RecuDto dto = new RecuDto();
         dto.setId(recu.getId());
+
+        // Numéro de pièce affiché
+        String numeroAffichage = String.format("%03d/CFACI/%d", recu.getId(), java.time.Year.now().getValue());
+        dto.setNumeroPieceAffichage(numeroAffichage);
+
         dto.setDate(recu.getDate());
         dto.setBeneficiaire(recu.getBeneficiaire());
         dto.setMontantEncaisse(recu.getMontantEncaisse());
         dto.setMode(recu.getMode());
         dto.setMotif(recu.getMotif());
+
+        // 🔹 Mappage utilisateur
         if (recu.getUtilisateur() != null) {
             dto.setUtilisateur(mapUtilisateur(recu.getUtilisateur()));
         }
@@ -129,15 +153,4 @@ public class RecuService {
         return dto;
     }
 
-
-    private Recu mapToEntity(RecuDto dto) {
-        Recu recu = new Recu();
-        recu.setNumeroPiece(dto.getNumeroPiece());
-        recu.setDate(dto.getDate());
-        recu.setBeneficiaire(dto.getBeneficiaire());
-        recu.setMontantEncaisse(dto.getMontantEncaisse());
-        recu.setMode(dto.getMode());
-        recu.setMotif(dto.getMotif());
-        return recu;
-    }
 }

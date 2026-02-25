@@ -3,21 +3,17 @@ package com.pro.Facture.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pro.Facture.Dto.*;
-import com.pro.Facture.Entity.Client;
-import com.pro.Facture.Entity.Commande;
-import com.pro.Facture.Entity.Place;
-import com.pro.Facture.Entity.Utilisateur;
-import com.pro.Facture.repository.ClientRepository;
-import com.pro.Facture.repository.CommandeRepository;
-import com.pro.Facture.repository.PlaceRepository;
-import com.pro.Facture.repository.UtilisateurRepository;
+import com.pro.Facture.Entity.*;
+import com.pro.Facture.repository.*;
 import com.pro.Facture.service.Pdf.CommandePdfService;
+import jakarta.transaction.Transactional;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -29,18 +25,20 @@ public class CommandeService {
 
     private final CommandeRepository commandeRepository;
     private final ClientRepository clientRepository;
+    private final PaiementCommandeRepository paiementCommandeRepository;
     private final CommandePdfService commandePdfService;
     private final PlaceRepository placeRepository;
     private final UtilisateurRepository utilisateurRepository;
     private final ObjectMapper objectMapper = new ObjectMapper(); // JSON mapper
 
     public CommandeService(CommandeRepository commandeRepository,
-                           ClientRepository clientRepository,
+                           ClientRepository clientRepository, PaiementCommandeRepository paiementCommandeRepository,
                            CommandePdfService commandePdfService,
                            PlaceRepository placeRepository, UtilisateurRepository utilisateurRepository) {
 
         this.commandeRepository = commandeRepository;
         this.clientRepository = clientRepository;
+        this.paiementCommandeRepository = paiementCommandeRepository;
         this.commandePdfService = commandePdfService;
         this.placeRepository = placeRepository;
         this.utilisateurRepository = utilisateurRepository;
@@ -49,13 +47,11 @@ public class CommandeService {
     // ----------------------------
     // CREATE FACTURE
     // ----------------------------
+    @Transactional
     public CommandeResponseDto createCommande(CommandeRequestDto dto) {
 
-        // 🔹 Récupération du client
         Client client = clientRepository.findById(dto.getClientId())
                 .orElseThrow(() -> new RuntimeException("Client introuvable"));
-
-        // 🔐 Récupération utilisateur connecté
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
@@ -63,21 +59,18 @@ public class CommandeService {
             throw new RuntimeException("Utilisateur non connecté");
         }
 
-        // Récupérer l'email depuis le principal
         String email;
         if (auth.getPrincipal() instanceof UserDetails userDetails) {
-            email = userDetails.getUsername(); // normalement c'est l'email
+            email = userDetails.getUsername();
         } else if (auth.getPrincipal() instanceof String s) {
-            email = s; // parfois JWT met juste l'email comme String
+            email = s;
         } else {
             throw new RuntimeException("Impossible de récupérer l'utilisateur");
         }
 
-        // Charger l'utilisateur depuis la base
         Utilisateur user = utilisateurRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
 
-        // 🔹 Calcul des totaux
         double totalBaseHT = 0.0;
         List<LigneCommandeResponseDto> lignes = new ArrayList<>();
 
@@ -96,12 +89,10 @@ public class CommandeService {
         double tauxTva = dto.getTauxTva() != null ? dto.getTauxTva() : 0.0;
         double totalTva = totalMT * (tauxTva / 100);
         double totalTTC = totalMT + totalTva;
-        double totalNetAPayer = totalTTC - dto.getAvance();
 
-        // 🔹 Création de la commande
         Commande commande = new Commande();
         commande.setClient(client);
-        commande.setUtilisateur(user); // important
+        commande.setUtilisateur(user);
         commande.setDateFacture(dto.getDateFacture());
         commande.setDesign("FACTURE MULTI-LIGNES");
         commande.setHt(totalBaseHT);
@@ -109,10 +100,9 @@ public class CommandeService {
         commande.setMt(totalMT);
         commande.setTva(tauxTva);
         commande.setMtTtc(totalTTC);
-        commande.setAvance(dto.getAvance());
-        commande.setNet(totalNetAPayer);
+        commande.setAvance(0.0); // 🔥 toujours 0 au départ
+        commande.setNet(totalTTC);
 
-        // Stocker les lignes en JSON
         try {
             String lignesJson = objectMapper.writeValueAsString(dto.getLignes());
             commande.setLignesJson(lignesJson);
@@ -120,30 +110,34 @@ public class CommandeService {
             throw new RuntimeException("Erreur conversion lignes en JSON");
         }
 
-        // 💾 Sauvegarde
         Commande saved = commandeRepository.save(commande);
         saved.setRef(generateRef(saved.getId()));
         commandeRepository.save(saved);
 
-        // 📦 Construction de la réponse
-        CommandeResponseDto response = new CommandeResponseDto();
-        response.setId(Math.toIntExact(saved.getId()));
-        response.setRef(saved.getRef());
-        response.setDateFacture(saved.getDateFacture());
-        response.setClient(mapClient(client));
-        response.setLignes(lignes);
-        response.setTotalBaseHT(totalBaseHT);
-        response.setTotalRetenue(totalRetenue);
-        response.setTotalHTNet(totalMT);
-        response.setTotalTva(totalTva);
-        response.setTotalTTC(totalTTC);
-        response.setTotalAvance(dto.getAvance());
-        response.setTotalNetAPayer(totalNetAPayer);
+        // 🔥 Si une avance est donnée à la création
+        if (dto.getAvance() != null && dto.getAvance() > 0) {
 
-        // Ajouter utilisateur dans la réponse
-        response.setUtilisateur(mapUtilisateur(user));
+            PaiementCommande paiement = new PaiementCommande();
+            paiement.setCommande(saved);
+            paiement.setMontant(dto.getAvance());
+            paiement.setDatePaiement(LocalDate.now()); // encaissement réel
 
-        return response;
+            paiementCommandeRepository.save(paiement);
+
+            // Mise à jour des montants
+            saved.setAvance(dto.getAvance());
+            saved.setNet(totalTTC - dto.getAvance());
+
+            if (saved.getNet() == 0) {
+                saved.setStatut("PAYEE");
+            } else {
+                saved.setStatut("IMPAYEE");
+            }
+
+            commandeRepository.save(saved);
+        }
+
+        return mapCommandeToDto(saved);
     }
 
     private String generateRef(Long id) {
@@ -270,38 +264,50 @@ public class CommandeService {
     }
 
 
-
-    // ----------------------------
-// AJOUT PAIEMENT (FACTURE MPE)
-// ----------------------------
+    @Transactional
     public CommandeResponseDto ajouterPaiement(PaiementCommandeDto dto) {
 
         Commande commande = commandeRepository.findById(dto.getCommandeId())
                 .orElseThrow(() -> new RuntimeException("Commande introuvable"));
 
-        if ("SOLDEE".equals(commande.getStatut())) {
+        if ("PAYEE".equals(commande.getStatut())) {
             throw new RuntimeException("Cette facture est déjà soldée");
         }
 
-        double ancienneAvance = commande.getAvance();
-        double mtTtc = commande.getMtTtc();
         double montantPaye = dto.getMontantPaye();
 
         if (montantPaye <= 0) {
             throw new RuntimeException("Montant invalide");
         }
 
-        double nouvelleAvance = ancienneAvance + montantPaye;
-        double nouveauNet = mtTtc - nouvelleAvance;
+        double totalDejaPaye = paiementCommandeRepository
+                .sumMontantByCommandeId(commande.getId());
 
-        if (nouveauNet < 0) {
+        if (totalDejaPaye == 0) {
+            totalDejaPaye = 0.0;
+        }
+
+        double nouveauTotal = totalDejaPaye + montantPaye;
+
+        if (nouveauTotal > commande.getMtTtc()) {
             throw new RuntimeException("Le montant payé dépasse le reste à payer");
         }
 
-        commande.setAvance(nouvelleAvance);
-        commande.setNet(nouveauNet);
+        // 🔥 1️⃣ On enregistre le paiement avec date du jour
+        PaiementCommande paiement = new PaiementCommande();
+        paiement.setMontant(montantPaye);
+        paiement.setDatePaiement(LocalDate.now());
+        paiement.setCommande(commande);
 
-        if (nouveauNet == 0) {
+        paiementCommandeRepository.save(paiement);
+
+        // 🔥 2️⃣ On met à jour les totaux
+        double reste = commande.getMtTtc() - nouveauTotal;
+
+        commande.setAvance(nouveauTotal);
+        commande.setNet(reste);
+
+        if (reste == 0) {
             commande.setStatut("PAYEE");
         } else {
             commande.setStatut("IMPAYEE");
@@ -309,10 +315,8 @@ public class CommandeService {
 
         Commande saved = commandeRepository.save(commande);
 
-        // 🔁 DTO mis à jour
         CommandeResponseDto response = mapCommandeToDto(saved);
 
-        // 🔁 PDF MIS À JOUR
         Place place = placeRepository.findFirstByOrderByIdAsc()
                 .orElseThrow(() -> new RuntimeException("Aucun Place trouvé"));
 

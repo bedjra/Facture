@@ -117,4 +117,37 @@ public class CommandeController {
     }
 
 
+
+    // 🔹 API 1 : Nombre total de factures
+    @GetMapping("/n")
+    public Long getNombreFactures() {
+        return dashService.getNombreFactures();
+    }
+
+    // 🔹 API 2 : Somme totale des factures
+    @GetMapping("/t-fact")
+    public Double getTotalFactures() {
+        return dashService.getTotalFactures();
+    }
+
+
+    @GetMapping("/net")
+    public Double getBenefice() {
+        return dashService.getBenefice();
+    }
+
+    @GetMapping("/camois")
+    public Double getCaMois() {
+        return dashService.getCaMois();
+    }
+
+    @GetMapping("/cajour")
+    public Double getCaJour() {
+        return dashService.getCaJour();
+    }
+
+    @GetMapping("/cahebdo")
+    public Double getCaHebdo() {
+        return dashService.getCaHebdo();
+    }
 }

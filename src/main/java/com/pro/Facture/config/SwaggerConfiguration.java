@@ -12,8 +12,8 @@ public class SwaggerConfiguration {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("ProPress API")
-                        .version("1.0")
-                        .description("Documentation de l'API ProPress"));
+                        .title("Facture Pro API")
+                        .version("2.0")
+                        .description("Documentation de l'API Facture Pro"));
     }
 }
