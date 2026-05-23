@@ -1,18 +1,17 @@
 package com.pro.Facture.Dto;
 
 import com.pro.Facture.enums.ModePaiement;
-import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+
 @Data
 public class RecuDto {
 
     private Long id;
 
-    private String numeroPieceAffichage;  // valeur générée pour le PDF
-
+    private String numeroPieceAffichage; // valeur générée pour le PDF
 
     private String numeroPiece;
 
@@ -22,9 +21,17 @@ public class RecuDto {
 
     private BigDecimal montantEncaisse;
 
+    // Nouveau champ
+    private BigDecimal montantTotal;
+
+    // Nouveau champ
+    private BigDecimal reste;
+
     private ModePaiement mode;
 
     private String motif;
+
+    private UtilisateurDto utilisateur;
 
     // =========================
     // Constructeurs
@@ -33,25 +40,24 @@ public class RecuDto {
     public RecuDto() {
     }
 
-    public RecuDto(Long id, String numeroPiece, LocalDate date, String beneficiaire,
-                   BigDecimal montantEncaisse, ModePaiement mode, String motif) {
+    public RecuDto(Long id,
+                   String numeroPiece,
+                   LocalDate date,
+                   String beneficiaire,
+                   BigDecimal montantEncaisse,
+                   BigDecimal montantTotal,
+                   BigDecimal reste,
+                   ModePaiement mode,
+                   String motif) {
+
         this.id = id;
         this.numeroPiece = numeroPiece;
         this.date = date;
         this.beneficiaire = beneficiaire;
         this.montantEncaisse = montantEncaisse;
+        this.montantTotal = montantTotal;
+        this.reste = reste;
         this.mode = mode;
         this.motif = motif;
     }
-
-    private UtilisateurDto utilisateur;
-
-
-    // =========================
-    // Getters & Setters
-    // =========================
-
-
-
-
 }

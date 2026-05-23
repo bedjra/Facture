@@ -1,6 +1,7 @@
 package com.pro.Facture.Controller;
 
 import com.pro.Facture.Dto.ClientDto;
+import com.pro.Facture.Dto.PaiementCommandeDto;
 import com.pro.Facture.service.ClientService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -49,5 +50,11 @@ public class ClientController {
     public String delete(@PathVariable Long id) {
         clientService.delete(id);
         return "Client supprimé avec succès";
+    }
+
+    @Operation(summary = "Historique des paiements d'un client")
+    @GetMapping("/{id}/paiements")
+    public List<PaiementCommandeDto> getHistoriquePaiements(@PathVariable Long id) {
+        return clientService.getHistoriquePaiements(id);
     }
 }

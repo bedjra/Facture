@@ -375,7 +375,7 @@ public class CommandePdfService {
 
         Paragraph l1 = new Paragraph(
                 "Audit, Assistance Comptable, fiscale et Sociale-Travaux d'inventaire, "
-                        + "Gestion des Salaires-Conseils et Formations", font);
+                        + "Récrutement et Formations", font);
         l1.setAlignment(Element.ALIGN_CENTER);
         cell.addElement(l1);
 

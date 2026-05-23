@@ -154,7 +154,7 @@ public class RecuPdfService {
                 .setMultipliedLeading(1.2f));
 
         document.add(new Paragraph()
-                .add(new Text("Travaux d'inventaire, Gestion des salaires - Conseils et Formation").setFontSize(s))
+                .add(new Text("Travaux d'inventaire, Récrutement et Formation").setFontSize(s))
                 .setMarginTop(0)
                 .setMarginBottom(lineSpacing));
 

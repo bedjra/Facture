@@ -4,9 +4,11 @@ package com.pro.Facture.repository;
 import com.pro.Facture.Entity.PaiementCommande;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Repository
 public interface PaiementCommandeRepository extends JpaRepository<PaiementCommande, Long> {
@@ -37,4 +39,8 @@ public interface PaiementCommandeRepository extends JpaRepository<PaiementComman
     """)
         Double caBetween(LocalDate startDate, LocalDate endDate);
 
+
+    // Récupérer les paiements via la commande liée au client
+    @Query("SELECT p FROM PaiementCommande p WHERE p.commande.client.id = :clientId ORDER BY p.datePaiement DESC")
+    List<PaiementCommande> findByClientId(@Param("clientId") Long clientId);
 }

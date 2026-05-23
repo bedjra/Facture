@@ -52,6 +52,9 @@ public class Commande {
     @JoinColumn(name = "utilisateur_id")
     private Utilisateur utilisateur;
 
+
+
+
     // Getters & Setters
     // ...
 

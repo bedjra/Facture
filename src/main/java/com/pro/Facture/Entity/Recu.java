@@ -26,6 +26,14 @@ public class Recu {
     @Column(name = "montant_encaisse", precision = 15, scale = 2)
     private BigDecimal montantEncaisse;
 
+    // Montant total
+    @Column(name = "montant_total", precision = 15, scale = 2)
+    private BigDecimal montantTotal;
+
+    // Reste à payer
+    @Column(name = "reste", precision = 15, scale = 2)
+    private BigDecimal reste;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ModePaiement mode;
@@ -35,7 +43,7 @@ public class Recu {
 
     // Relation vers Place
     @ManyToOne
-    @JoinColumn(name = "place_id") // colonne de jointure dans la table recu
+    @JoinColumn(name = "place_id")
     private Place place;
 
     @ManyToOne
@@ -43,33 +51,22 @@ public class Recu {
     private Utilisateur utilisateur;
 
     // =========================
-    // Constructeurs
+    // Calcul automatique du reste
     // =========================
-    public Recu() { }
+    @PrePersist
+    @PreUpdate
+    public void calculerReste() {
+
+        if (montantTotal != null && montantEncaisse != null) {
+            this.reste = montantTotal.subtract(montantEncaisse);
+        } else {
+            this.reste = BigDecimal.ZERO;
+        }
+    }
 
     // =========================
-    // Getters & Setters
+    // Constructeur
     // =========================
-    public Long getId() { return id; }
-
-    public String getNumeroPiece() { return numeroPiece; }
-    public void setNumeroPiece(String numeroPiece) { this.numeroPiece = numeroPiece; }
-
-    public LocalDate getDate() { return date; }
-    public void setDate(LocalDate date) { this.date = date; }
-
-    public String getBeneficiaire() { return beneficiaire; }
-    public void setBeneficiaire(String beneficiaire) { this.beneficiaire = beneficiaire; }
-
-    public BigDecimal getMontantEncaisse() { return montantEncaisse; }
-    public void setMontantEncaisse(BigDecimal montantEncaisse) { this.montantEncaisse = montantEncaisse; }
-
-    public ModePaiement getMode() { return mode; }
-    public void setMode(ModePaiement mode) { this.mode = mode; }
-
-    public String getMotif() { return motif; }
-    public void setMotif(String motif) { this.motif = motif; }
-
-    public Place getPlace() { return place; }
-    public void setPlace(Place place) { this.place = place; }
+    public Recu() {
+    }
 }
