@@ -5,16 +5,19 @@ import com.pro.Facture.Dto.PaiementCommandeDto;
 import com.pro.Facture.Entity.Client;
 import com.pro.Facture.Entity.PaiementCommande;
 import com.pro.Facture.repository.ClientRepository;
+import com.pro.Facture.repository.CommandeRepository;
 import com.pro.Facture.repository.PaiementCommandeRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 public class ClientService {
 
     private final ClientRepository clientRepository;
+    private final CommandeRepository commandeRepository;
     private final PaiementCommandeRepository paiementCommandeRepository;
 
     // =========================
@@ -22,9 +25,11 @@ public class ClientService {
     // =========================
 
     public ClientService(ClientRepository clientRepository,
+                         CommandeRepository commandeRepository, CommandeRepository commandeRepository1,
                          PaiementCommandeRepository paiementCommandeRepository) {
 
         this.clientRepository = clientRepository;
+        this.commandeRepository = commandeRepository1;
         this.paiementCommandeRepository = paiementCommandeRepository;
     }
 
@@ -152,15 +157,29 @@ public class ClientService {
     // HISTORIQUE PAIEMENTS
     // =========================
 
-    public List<PaiementCommandeDto> getHistoriquePaiements(Long clientId) {
+    public Map<String, Object> getHistoriquePaiements(Long clientId) {
 
-        // Vérifier que le client existe
         clientRepository.findById(clientId)
                 .orElseThrow(() -> new RuntimeException("Client introuvable"));
 
-        return paiementCommandeRepository.findByClientId(clientId)
+        List<PaiementCommandeDto> paiements = paiementCommandeRepository.findByClientId(clientId)
                 .stream()
                 .map(this::mapPaiementToDto)
                 .collect(Collectors.toList());
+
+        double totalMontantPaye = paiements.stream()
+                .mapToDouble(p -> p.getMontantPaye() != null ? p.getMontantPaye() : 0.0)
+                .sum();
+
+        double totalResteAPayer = commandeRepository.findByClientId(clientId)
+                .stream()
+                .mapToDouble(c -> c.getNet() != null ? c.getNet() : 0.0)
+                .sum();
+
+        return Map.of(
+                "paiements", paiements,
+                "totalMontantPaye", totalMontantPaye,
+                "totalResteAPayer", totalResteAPayer
+        );
     }
 }

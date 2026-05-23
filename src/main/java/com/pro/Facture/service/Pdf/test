@@ -3,11 +3,14 @@ package com.pro.Facture.service.Pdf;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.kernel.colors.ColorConstants;
 import com.itextpdf.kernel.colors.DeviceGray;
+import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
+import com.itextpdf.layout.borders.DashedBorder;
 import com.itextpdf.layout.borders.SolidBorder;
 import com.itextpdf.layout.element.*;
 import com.itextpdf.layout.properties.TextAlignment;
@@ -26,6 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Year;
+import java.time.format.DateTimeFormatter;
 
 @Service
 public class RecuPdfService {
@@ -49,32 +53,34 @@ public class RecuPdfService {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
-            // 1. Gestion du dossier de stockage
             String folderName = "RecuPdf";
             Path folderPath = Paths.get(folderName);
             if (!Files.exists(folderPath)) {
                 Files.createDirectories(folderPath);
             }
 
-            // 2. Nom du fichier basé sur le numéro de pièce ou l'ID
-            String fileName = "Recu_" + (recu.getNumeroPiece() != null ? recu.getNumeroPiece().replace("/", "-") : id) + ".pdf";
+            String fileName = "Recu_" + (recu.getNumeroPiece() != null
+                    ? recu.getNumeroPiece().replace("/", "-") : id) + ".pdf";
             File destinationFile = new File(folderName, fileName);
 
-            // 3. Initialisation du PDF
             PdfWriter writer = new PdfWriter(out);
             PdfDocument pdf = new PdfDocument(writer);
             Document document = new Document(pdf, PageSize.A4);
-            document.setMargins(25, 35, 25, 35);
+            document.setMargins(20, 35, 20, 35);
 
-            // Construction du contenu
-            buildRecuBlock(document, place, recu);
+            // ── COPIE 1 : EXEMPLAIRE CLIENT ──
+            buildRecuBlock(document, place, recu, "EXEMPLAIRE CLIENT");
+
+            // ── SÉPARATEUR EN POINTILLÉS ──
+            addSeparator(document);
+
+            // ── COPIE 2 : EXEMPLAIRE CABINET ──
+            buildRecuBlock(document, place, recu, "EXEMPLAIRE CABINET");
 
             document.close();
 
-            // 4. Conversion en tableau d'octets
             byte[] pdfBytes = out.toByteArray();
 
-            // 5. Sauvegarde physique dans le dossier RecuPdf
             try (FileOutputStream fos = new FileOutputStream(destinationFile)) {
                 fos.write(pdfBytes);
             }
@@ -87,25 +93,62 @@ public class RecuPdfService {
     }
 
     // =========================================================
-    //  BLOC DU REÇU
+    //  SÉPARATEUR POINTILLÉS
     // =========================================================
-    private void buildRecuBlock(Document document, Place place, Recu recu) throws Exception {
+    private void addSeparator(Document document) {
+        // Ligne pointillée via une table pleine largeur avec bordure dashed
+        Table sep = new Table(UnitValue.createPercentArray(new float[]{1f}))
+                .setWidth(UnitValue.createPercentValue(100))
+                .setMarginTop(6)
+                .setMarginBottom(6);
 
-        // Titre principal
+        Cell sepCell = new Cell()
+                .setBorder(Border.NO_BORDER)
+                .setBorderTop(new DashedBorder(ColorConstants.DARK_GRAY, 1.2f))
+                .setPaddingTop(4)
+                .setPaddingBottom(4);
+
+        Paragraph cutLine = new Paragraph("✂  Découper ici  ✂")
+                .setFontSize(7)
+                .setFontColor(new DeviceGray(0.5f))
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginTop(2)
+                .setMarginBottom(0);
+
+        sepCell.add(cutLine);
+        sep.addCell(sepCell);
+        document.add(sep);
+    }
+
+    // =========================================================
+    //  BLOC DU REÇU (réutilisé 2 fois)
+    // =========================================================
+    private void buildRecuBlock(Document document, Place place, Recu recu, String exemplaire) throws Exception {
+
+        // ── Bandeau exemplaire ──
+        Paragraph bandeauExemplaire = new Paragraph(exemplaire)
+                .setFontSize(7)
+                .setBold()
+                .setFontColor(new DeviceGray(0.45f))
+                .setTextAlignment(TextAlignment.RIGHT)
+                .setMarginBottom(2);
+        document.add(bandeauExemplaire);
+
+        // ── EN-TÊTE société ──
         Text titrePrincipal = new Text("CFACI GROUP CONSULTING\n")
                 .setBold()
-                .setFontSize(26)
+                .setFontSize(20)
                 .setFontColor(ColorConstants.DARK_GRAY);
 
         Text description = new Text("Cabinet d'expertise comptable et d'audit")
-                .setFontSize(12)
+                .setFontSize(10)
                 .setFontColor(ColorConstants.BLACK);
 
         Paragraph titre = new Paragraph()
                 .add(titrePrincipal)
                 .add(description)
                 .setTextAlignment(TextAlignment.CENTER)
-                .setMarginBottom(5)
+                .setMarginBottom(4)
                 .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 1f))
                 .setPaddingBottom(3);
 
@@ -114,42 +157,54 @@ public class RecuPdfService {
         // ── HEADER : [logo] | [DATE / PIÈCE / MONTANT] ──
         Table header = new Table(UnitValue.createPercentArray(new float[]{55, 45}))
                 .setWidth(UnitValue.createPercentValue(100))
-                .setMarginBottom(8);
+                .setMarginBottom(6);
 
         Cell leftCell = new Cell().setBorder(Border.NO_BORDER).setPadding(0);
         if (place.getLogo() != null && place.getLogo().length > 0) {
             try {
                 Image logo = new Image(ImageDataFactory.create(place.getLogo()))
-                        .setWidth(60)
-                        .setHeight(60);
+                        .setWidth(55)
+                        .setHeight(55);
                 leftCell.add(logo);
             } catch (Exception ignored) {}
         }
         header.addCell(leftCell);
 
-        Cell rightCell = new Cell().setBorder(Border.NO_BORDER).setPadding(0)
-                .setVerticalAlignment(VerticalAlignment.MIDDLE);
-        rightCell.add(labelValueRow("DATE :", recu.getDate() != null ? recu.getDate().toString() : ""));
-// ======= Génération du numéro de pièce =======
-        int compteur = Math.toIntExact(recu.getId() != null ? recu.getId() : 1); // ou tout compteur que tu utilises
-        String annee = String.valueOf(Year.now().getValue());   // année en cours
+        // Numéro de pièce formaté
+        int compteur = Math.toIntExact(recu.getId() != null ? recu.getId() : 1);
+        String annee = String.valueOf(Year.now().getValue());
         String numeroPieceFormat = String.format("%03d/CFACI/%s", compteur, annee);
 
-// Ajout dans la cellule
+        // Date formatée
+        String dateFormatee = recu.getDate() != null
+                ? recu.getDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                : "";
+
+        Cell rightCell = new Cell().setBorder(Border.NO_BORDER).setPadding(0)
+                .setVerticalAlignment(VerticalAlignment.MIDDLE);
+        rightCell.add(labelValueRow("DATE :", dateFormatee));
         rightCell.add(labelValueRow("PIÈCE DE CAISSE N° :", numeroPieceFormat));
-        rightCell.add(labelValueRow("MONTANT :", recu.getMontantEncaisse() != null ? recu.getMontantEncaisse() + " FCFA" : ""));
+        rightCell.add(labelValueRow("MONTANT ENCAISSÉ :", recu.getMontantEncaisse() != null
+                ? format(recu.getMontantEncaisse().doubleValue()) + " FCFA" : ""));
+        // ✅ NOUVEAU : montant total + reste
+        rightCell.add(labelValueRow("MONTANT TOTAL :", recu.getMontantTotal() != null
+                ? format(recu.getMontantTotal().doubleValue()) + " FCFA" : ""));
+        rightCell.add(labelValueRow("RESTE À PAYER :", recu.getReste() != null
+                ? format(recu.getReste().doubleValue()) + " FCFA" : ""));
+        // ✅ NOUVEAU : mode de paiement
+//        rightCell.add(labelValueRow("MODE DE PAIEMENT :", recu.getMode() != null
+//                ? String.valueOf(recu.getMode()) : ""));
         header.addCell(rightCell);
 
         document.add(header);
 
         // ── INFOS CABINET ──
-        float s = 8.5f;
-        float labelValueSpacing = 4f;
+        float s = 8f;
         float lineSpacing = 2f;
-// ACTIVITE
+
         document.add(new Paragraph()
                 .add(new Text("ACTIVITE").setBold().setUnderline().setFontSize(s))
-                .add(new Text(" : ").setBold().setFontSize(s))  // espace hors du soulignement
+                .add(new Text(" : ").setBold().setFontSize(s))
                 .add(new Text("Audit, Assistance comptable, fiscale et sociale").setFontSize(s))
                 .setMultipliedLeading(1.2f));
 
@@ -158,19 +213,16 @@ public class RecuPdfService {
                 .setMarginTop(0)
                 .setMarginBottom(lineSpacing));
 
-// SIEGE
         document.add(new Paragraph()
                 .add(new Text("SIEGE").setBold().setUnderline().setFontSize(s))
                 .add(new Text(" : ").setBold().setFontSize(s))
                 .add(new Text(place.getAdresse() != null ? place.getAdresse() : "-").setFontSize(s))
                 .setMarginBottom(lineSpacing));
 
-// TEL
         String telephone = place.getTelephone() != null ? place.getTelephone() : "";
         String cel       = place.getCel() != null && !place.getCel().isEmpty() ? place.getCel() : "";
         String tels      = !telephone.isEmpty() && !cel.isEmpty()
-                ? telephone + " / " + cel
-                : telephone + cel;
+                ? telephone + " / " + cel : telephone + cel;
 
         document.add(new Paragraph()
                 .add(new Text("Tél").setBold().setUnderline().setFontSize(s))
@@ -178,7 +230,6 @@ public class RecuPdfService {
                 .add(new Text(!tels.isEmpty() ? tels : "-").setFontSize(s))
                 .setMarginBottom(lineSpacing));
 
-// EMAIL
         document.add(new Paragraph()
                 .add(new Text("E-mail").setBold().setUnderline().setFontSize(s))
                 .add(new Text(" : ").setBold().setFontSize(s))
@@ -186,30 +237,80 @@ public class RecuPdfService {
                         ? place.getEmail() : "-").setFontSize(s))
                 .setMarginBottom(lineSpacing));
 
-// NIF
         document.add(new Paragraph()
                 .add(new Text("NIF").setBold().setUnderline().setFontSize(s))
                 .add(new Text(" : ").setBold().setFontSize(s))
                 .add(new Text("1 001 727 149").setFontSize(s))
-                .setMarginBottom(10));
+                .setMarginBottom(8));
+
         // ── TABLEAU BÉNÉFICIAIRE / SOMME / MOTIF ──
         Table infoTable = new Table(UnitValue.createPercentArray(new float[]{1}))
                 .setWidth(UnitValue.createPercentValue(100))
                 .setBorder(new SolidBorder(ColorConstants.BLACK, 1))
-                .setMarginBottom(12);
+                .setMarginBottom(8);
 
-        infoTable.addCell(new Cell().setBorder(Border.NO_BORDER).setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.5f)).setPadding(7)
-                .add(new Paragraph().add(new Text("Bénéficiaire : ").setBold().setFontSize(9))
+        // Bénéficiaire
+        infoTable.addCell(new Cell()
+                .setBorder(Border.NO_BORDER)
+                .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.5f))
+                .setPadding(6)
+                .add(new Paragraph()
+                        .add(new Text("Bénéficiaire : ").setBold().setFontSize(9))
                         .add(new Text(recu.getBeneficiaire() != null ? recu.getBeneficiaire() : "").setFontSize(9))));
 
+        // Somme en lettres
         String montantLettre = convertirEnLettres(recu.getMontantEncaisse());
-        infoTable.addCell(new Cell().setBorder(Border.NO_BORDER).setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.5f)).setPadding(7)
-                .add(new Paragraph().add(new Text("La somme de ( en lettre ) : ").setBold().setFontSize(9))
+        infoTable.addCell(new Cell()
+                .setBorder(Border.NO_BORDER)
+                .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.5f))
+                .setPadding(6)
+                .add(new Paragraph()
+                        .add(new Text("La somme de ( en lettre ) : ").setBold().setFontSize(9))
                         .add(new Text(montantLettre).setFontSize(9))));
 
-        infoTable.addCell(new Cell().setBorder(Border.NO_BORDER).setPadding(7).setMinHeight(45)
-                .add(new Paragraph().add(new Text("Motif : ").setBold().setFontSize(9))
+        // Motif
+        infoTable.addCell(new Cell()
+                .setBorder(Border.NO_BORDER)
+                .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.5f))
+                .setPadding(6)
+                .setMinHeight(35)
+                .add(new Paragraph()
+                        .add(new Text("Motif : ").setBold().setFontSize(9))
                         .add(new Text(recu.getMotif() != null ? recu.getMotif() : "").setFontSize(9))));
+
+        // ✅ NOUVEAU : ligne mode de paiement dans le tableau
+        infoTable.addCell(new Cell()
+                .setBorder(Border.NO_BORDER)
+                .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.5f))
+                .setPadding(6)
+//                .add(new Paragraph()
+//                        .add(new Text("Mode de paiement : ").setBold().setFontSize(9))
+//                        .add(new Text(recu.getMode() != null ? recu.getMode() : "").setFontSize(9)))
+                       );
+
+        // ✅ NOUVEAU : ligne récapitulatif montants
+        Table montantsRow = new Table(UnitValue.createPercentArray(new float[]{1, 1, 1}))
+                .setWidth(UnitValue.createPercentValue(100));
+
+        montantsRow.addCell(new Cell().setBorder(Border.NO_BORDER)
+                .add(new Paragraph()
+                        .add(new Text("Montant total : ").setBold().setFontSize(9))
+                        .add(new Text(recu.getMontantTotal() != null
+                                ? format(recu.getMontantTotal().doubleValue()) + " FCFA" : "-").setFontSize(9))));
+
+        montantsRow.addCell(new Cell().setBorder(Border.NO_BORDER)
+                .add(new Paragraph()
+                        .add(new Text("Encaissé : ").setBold().setFontSize(9))
+                        .add(new Text(recu.getMontantEncaisse() != null
+                                ? format(recu.getMontantEncaisse().doubleValue()) + " FCFA" : "-").setFontSize(9))));
+
+        montantsRow.addCell(new Cell().setBorder(Border.NO_BORDER)
+                .add(new Paragraph()
+                        .add(new Text("Reste : ").setBold().setFontSize(9))
+                        .add(new Text(recu.getReste() != null
+                                ? format(recu.getReste().doubleValue()) + " FCFA" : "-").setFontSize(9))));
+
+        infoTable.addCell(new Cell().setBorder(Border.NO_BORDER).setPadding(4).add(montantsRow));
 
         document.add(infoTable);
 
@@ -220,10 +321,25 @@ public class RecuPdfService {
 
         sigTable.addCell(signatureCell("ACCORD DE LA DIRECTION"));
         sigTable.addCell(signatureCell("SIGNATURE CAISSE"));
-        sigTable.addCell(signatureCell("SIGNATURE BENEFICIAIRE"));
+        sigTable.addCell(signatureCell("SIGNATURE BÉNÉFICIAIRE"));
 
         document.add(sigTable);
+
+        // ✅ NOUVEAU : utilisateur créateur en bas à gauche
+        if (recu.getUtilisateur() != null) {
+            Paragraph creePar = new Paragraph(
+                    "Établi par : " + recu.getUtilisateur().getEmail())
+                    .setFontSize(7)
+                    .setFontColor(new DeviceGray(0.5f))
+                    .setTextAlignment(TextAlignment.LEFT)
+                    .setMarginTop(2);
+            document.add(creePar);
+        }
     }
+
+    // =========================================================
+    //  HELPERS
+    // =========================================================
 
     private Paragraph labelValueRow(String label, String value) {
         return new Paragraph()
@@ -231,19 +347,31 @@ public class RecuPdfService {
                 .add(new Text(value != null ? value : "").setFontSize(8))
                 .setBackgroundColor(new DeviceGray(0.82f))
                 .setPadding(3)
-                .setMarginBottom(3);
+                .setMarginBottom(2);
     }
 
     private Cell signatureCell(String label) {
-        Table inner = new Table(UnitValue.createPercentArray(new float[]{1})).setWidth(UnitValue.createPercentValue(100));
-        inner.addCell(new Cell().setBorder(Border.NO_BORDER).add(new Paragraph(label).setBold().setFontSize(7).setTextAlignment(TextAlignment.CENTER)));
-        inner.addCell(new Cell().setHeight(32).setBackgroundColor(new DeviceGray(0.82f)).setBorder(new SolidBorder(ColorConstants.BLACK, 0.5f)));
+        Table inner = new Table(UnitValue.createPercentArray(new float[]{1}))
+                .setWidth(UnitValue.createPercentValue(100));
+        inner.addCell(new Cell().setBorder(Border.NO_BORDER)
+                .add(new Paragraph(label).setBold().setFontSize(7)
+                        .setTextAlignment(TextAlignment.CENTER)));
+        inner.addCell(new Cell().setHeight(28)
+                .setBackgroundColor(new DeviceGray(0.82f))
+                .setBorder(new SolidBorder(ColorConstants.BLACK, 0.5f)));
         return new Cell().setBorder(Border.NO_BORDER).setPadding(3).add(inner);
     }
 
-    // ── LOGIQUE CONVERSION LETTRES ──
-    private static final String[] UNITES = {"", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "dix-sept", "dix-huit", "dix-neuf"};
-    private static final String[] DIZAINES = {"", "", "vingt", "trente", "quarante", "cinquante", "soixante", "soixante", "quatre-vingt", "quatre-vingt"};
+    private String format(double d) {
+        return String.format("%,.0f", d);
+    }
+
+    // ── CONVERSION EN LETTRES ──
+    private static final String[] UNITES  = {"", "un", "deux", "trois", "quatre", "cinq", "six",
+            "sept", "huit", "neuf", "dix", "onze", "douze", "treize", "quatorze", "quinze",
+            "seize", "dix-sept", "dix-huit", "dix-neuf"};
+    private static final String[] DIZAINES = {"", "", "vingt", "trente", "quarante",
+            "cinquante", "soixante", "soixante", "quatre-vingt", "quatre-vingt"};
 
     private String convertirEnLettres(java.math.BigDecimal montant) {
         if (montant == null) return "";
@@ -253,13 +381,15 @@ public class RecuPdfService {
     }
 
     private String centainesEnLettres(long n) {
-        if (n < 0) return "moins " + centainesEnLettres(-n);
+        if (n < 0)  return "moins " + centainesEnLettres(-n);
         if (n == 0) return "";
         if (n < 20) return UNITES[(int) n];
         if (n < 100) {
-            int d = (int) (n / 10), u = (int) (n % 10);
-            if (d == 7 || d == 9) return DIZAINES[d] + "-" + UNITES[(int) (10 + n % 10)];
-            String lien = (d == 8 && u == 0) ? "s" : (u == 1 && d != 8) ? "-et-un" : (u > 0) ? "-" + UNITES[u] : "";
+            int d = (int)(n / 10), u = (int)(n % 10);
+            if (d == 7 || d == 9) return DIZAINES[d] + "-" + UNITES[(int)(10 + n % 10)];
+            String lien = (d == 8 && u == 0) ? "s"
+                    : (u == 1 && d != 8) ? "-et-un"
+                    : (u > 0) ? "-" + UNITES[u] : "";
             return DIZAINES[d] + lien;
         }
         if (n < 1_000) {
@@ -274,9 +404,11 @@ public class RecuPdfService {
         }
         if (n < 1_000_000_000) {
             long m = n / 1_000_000, r = n % 1_000_000;
-            return centainesEnLettres(m) + "-million" + (m > 1 ? "s" : "") + (r > 0 ? "-" + centainesEnLettres(r) : "");
+            return centainesEnLettres(m) + "-million" + (m > 1 ? "s" : "")
+                    + (r > 0 ? "-" + centainesEnLettres(r) : "");
         }
         long m = n / 1_000_000_000, r = n % 1_000_000_000;
-        return centainesEnLettres(m) + "-milliard" + (m > 1 ? "s" : "") + (r > 0 ? "-" + centainesEnLettres(r) : "");
+        return centainesEnLettres(m) + "-milliard" + (m > 1 ? "s" : "")
+                + (r > 0 ? "-" + centainesEnLettres(r) : "");
     }
 }

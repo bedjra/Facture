@@ -5,9 +5,11 @@ import com.pro.Facture.Dto.PaiementCommandeDto;
 import com.pro.Facture.service.ClientService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/client")
@@ -52,9 +54,11 @@ public class ClientController {
         return "Client supprimé avec succès";
     }
 
+
+
     @Operation(summary = "Historique des paiements d'un client")
     @GetMapping("/{id}/paiements")
-    public List<PaiementCommandeDto> getHistoriquePaiements(@PathVariable Long id) {
-        return clientService.getHistoriquePaiements(id);
+    public ResponseEntity<Map<String, Object>> getHistoriquePaiements(@PathVariable Long id) {
+        return ResponseEntity.ok(clientService.getHistoriquePaiements(id));
     }
 }

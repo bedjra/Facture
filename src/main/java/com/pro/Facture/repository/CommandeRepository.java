@@ -65,6 +65,7 @@ public interface CommandeRepository extends JpaRepository<Commande, Long> {
     Double sumFactures();
 
 
+    List<Commande> findByClientId(Long clientId);
 
 
 

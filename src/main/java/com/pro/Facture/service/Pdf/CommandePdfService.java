@@ -45,8 +45,11 @@ public class CommandePdfService {
             header.setSpacingAfter(10);
 
             // Cellule logo
+            // Cellule logo
             PdfPCell logoCell = new PdfPCell();
-            logoCell.setBorder(Rectangle.NO_BORDER);
+            logoCell.setBorder(Rectangle.BOTTOM);          // ← ajouter BOTTOM ici
+            logoCell.setBorderWidthBottom(1f);             // ← même épaisseur
+            logoCell.setBorderColorBottom(BaseColor.BLACK);
             logoCell.setPadding(20);
             logoCell.setHorizontalAlignment(Element.ALIGN_CENTER);
             logoCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
