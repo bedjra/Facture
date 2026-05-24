@@ -22,7 +22,7 @@ public class CommandePdfService {
     public byte[] genererPdf(CommandeResponseDto dto, Place place) {
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        Document doc = new Document(PageSize.A4, 30, 30, 35, 35);
+        Document doc = new Document(PageSize.A4, 20, 20, 10, 20);
 
         try {
             PdfWriter writer = PdfWriter.getInstance(doc, out);
@@ -173,7 +173,7 @@ public class CommandePdfService {
                 String ref = String.format("%06d", i++);
                 table.addCell(createTableCell(ref,               fNormal, Element.ALIGN_CENTER));
                 table.addCell(createTableCell(l.getDesign(),     fNormal, Element.ALIGN_LEFT));
-                table.addCell(createTableCell(format(l.getBaseHT()), fNormal, Element.ALIGN_RIGHT));
+                table.addCell(createTableCell(format(l.getBaseHT()), fNormal, Element.ALIGN_CENTER));
             }
 
             // Lignes vides pour remplissage visuel (optionnel, comme dans le modèle)

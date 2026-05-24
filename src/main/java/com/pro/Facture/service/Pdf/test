@@ -123,80 +123,119 @@ public class RecuPdfService {
     // =========================================================
     //  BLOC DU REÇU (réutilisé 2 fois)
     // =========================================================
-    private void buildRecuBlock(Document document, Place place, Recu recu, String exemplaire) throws Exception {
+   private void buildRecuBlock(Document document, Place place, Recu recu, String exemplaire) throws Exception {
 
-        // ── Bandeau exemplaire ──
-        Paragraph bandeauExemplaire = new Paragraph(exemplaire)
-                .setFontSize(7)
-                .setBold()
-                .setFontColor(new DeviceGray(0.45f))
-                .setTextAlignment(TextAlignment.RIGHT)
-                .setMarginBottom(2);
-        document.add(bandeauExemplaire);
+       // ── Bandeau exemplaire ──
+       Paragraph bandeauExemplaire = new Paragraph(exemplaire)
+               .setFontSize(7)
+               .setBold()
+               .setFontColor(new DeviceGray(0.45f))
+               .setTextAlignment(TextAlignment.RIGHT)
+               .setMarginBottom(2);
+       document.add(bandeauExemplaire);
 
-        // ── EN-TÊTE société ──
-        Text titrePrincipal = new Text("CFACI GROUP CONSULTING\n")
-                .setBold()
-                .setFontSize(20)
-                .setFontColor(ColorConstants.DARK_GRAY);
+       // ── EN-TÊTE : titre centré + trait ──
+       Paragraph titre = new Paragraph()
+               .add(new Text("CFACI GROUP CONSULTING\n").setBold().setFontSize(20).setFontColor(ColorConstants.DARK_GRAY))
+               .add(new Text("Cabinet d'expertise comptable et d'audit").setFontSize(10).setFontColor(ColorConstants.BLACK))
+               .setTextAlignment(TextAlignment.CENTER)
+               .setMarginBottom(4)
+               .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 1f))
+               .setPaddingBottom(3);
+       document.add(titre);
 
-        Text description = new Text("Cabinet d'expertise comptable et d'audit")
-                .setFontSize(10)
-                .setFontColor(ColorConstants.BLACK);
+       // ── HEADER 3 colonnes : logo | infos cabinet | infos pièce ──
+       Table header = new Table(UnitValue.createPercentArray(new float[]{18, 42, 40}))
+               .setWidth(UnitValue.createPercentValue(100))
+               .setMarginBottom(0);
 
-        Paragraph titre = new Paragraph()
-                .add(titrePrincipal)
-                .add(description)
-                .setTextAlignment(TextAlignment.CENTER)
-                .setMarginBottom(4)
-                .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 1f))
-                .setPaddingBottom(3);
+       // ── Colonne 1 : Logo ──
+       Cell logoCell = new Cell().setBorder(Border.NO_BORDER)
+               .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 1f))
+               .setPadding(4)
+               .setVerticalAlignment(VerticalAlignment.TOP);
+       if (place.getLogo() != null && place.getLogo().length > 0) {
+           try {
+               Image logo = new Image(ImageDataFactory.create(place.getLogo()))
+                       .setWidth(55).setHeight(55);
+               logoCell.add(logo);
+           } catch (Exception ignored) {}
+       }
+       header.addCell(logoCell);
 
-        document.add(titre);
+       // ── Colonne 2 : Infos cabinet ──
+       float s = 8f;
+       float lineSpacing = 1.5f;
+       Cell infoCell = new Cell().setBorder(Border.NO_BORDER)
+               .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 1f))
+               .setPadding(4)
+               .setVerticalAlignment(VerticalAlignment.TOP);
 
-        // ── HEADER : [logo] | [DATE / PIÈCE / MONTANT] ──
-        Table header = new Table(UnitValue.createPercentArray(new float[]{55, 45}))
-                .setWidth(UnitValue.createPercentValue(100))
-                .setMarginBottom(6);
+       infoCell.add(new Paragraph()
+               .add(new Text("ACTIVITE").setBold().setUnderline().setFontSize(s))
+               .add(new Text(" : ").setBold().setFontSize(s))
+               .add(new Text("Audit, Assistance comptable, fiscale et sociale").setFontSize(s))
+               .setMultipliedLeading(1.2f).setMarginBottom(0));
 
-        Cell leftCell = new Cell().setBorder(Border.NO_BORDER).setPadding(0);
-        if (place.getLogo() != null && place.getLogo().length > 0) {
-            try {
-                Image logo = new Image(ImageDataFactory.create(place.getLogo()))
-                        .setWidth(55)
-                        .setHeight(55);
-                leftCell.add(logo);
-            } catch (Exception ignored) {}
-        }
-        header.addCell(leftCell);
+       infoCell.add(new Paragraph()
+               .add(new Text("Travaux d'inventaire, Recrutement et Formation").setFontSize(s))
+               .setMarginTop(0).setMarginBottom(lineSpacing));
 
-        // Numéro de pièce formaté
-        int compteur = Math.toIntExact(recu.getId() != null ? recu.getId() : 1);
-        String annee = String.valueOf(Year.now().getValue());
-        String numeroPieceFormat = String.format("%03d/CFACI/%s", compteur, annee);
+       infoCell.add(new Paragraph()
+               .add(new Text("SIEGE").setBold().setUnderline().setFontSize(s))
+               .add(new Text(" : ").setBold().setFontSize(s))
+               .add(new Text(place.getAdresse() != null ? place.getAdresse() : "-").setFontSize(s))
+               .setMarginBottom(lineSpacing));
 
-        // Date formatée
-        String dateFormatee = recu.getDate() != null
-                ? recu.getDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-                : "";
+       String telephone = place.getTelephone() != null ? place.getTelephone() : "";
+       String cel = place.getCel() != null && !place.getCel().isEmpty() ? place.getCel() : "";
+       String tels = !telephone.isEmpty() && !cel.isEmpty() ? telephone + " / " + cel : telephone + cel;
 
-        Cell rightCell = new Cell().setBorder(Border.NO_BORDER).setPadding(0)
-                .setVerticalAlignment(VerticalAlignment.MIDDLE);
-        rightCell.add(labelValueRow("DATE :", dateFormatee));
-        rightCell.add(labelValueRow("PIÈCE DE CAISSE N° :", numeroPieceFormat));
-        rightCell.add(labelValueRow("MONTANT ENCAISSÉ :", recu.getMontantEncaisse() != null
-                ? format(recu.getMontantEncaisse().doubleValue()) + " FCFA" : ""));
-        // ✅ NOUVEAU : montant total + reste
-        rightCell.add(labelValueRow("MONTANT TOTAL :", recu.getMontantTotal() != null
-                ? format(recu.getMontantTotal().doubleValue()) + " FCFA" : ""));
-        rightCell.add(labelValueRow("RESTE À PAYER :", recu.getReste() != null
-                ? format(recu.getReste().doubleValue()) + " FCFA" : ""));
-        // ✅ NOUVEAU : mode de paiement
-//        rightCell.add(labelValueRow("MODE DE PAIEMENT :", recu.getMode() != null
-//                ? String.valueOf(recu.getMode()) : ""));
-        header.addCell(rightCell);
+       infoCell.add(new Paragraph()
+               .add(new Text("Tel").setBold().setUnderline().setFontSize(s))
+               .add(new Text(" : ").setBold().setFontSize(s))
+               .add(new Text(!tels.isEmpty() ? tels : "-").setFontSize(s))
+               .setMarginBottom(lineSpacing));
 
-        document.add(header);
+       infoCell.add(new Paragraph()
+               .add(new Text("E-mail").setBold().setUnderline().setFontSize(s))
+               .add(new Text(" : ").setBold().setFontSize(s))
+               .add(new Text(place.getEmail() != null && !place.getEmail().isEmpty() ? place.getEmail() : "-").setFontSize(s))
+               .setMarginBottom(lineSpacing));
+
+       infoCell.add(new Paragraph()
+               .add(new Text("NIF").setBold().setUnderline().setFontSize(s))
+               .add(new Text(" : ").setBold().setFontSize(s))
+               .add(new Text("1 001 727 149").setFontSize(s))
+               .setMarginBottom(0));
+
+       header.addCell(infoCell);
+
+       // ── Colonne 3 : Infos pièce ──
+       int compteur = Math.toIntExact(recu.getId() != null ? recu.getId() : 1);
+       String annee = String.valueOf(Year.now().getValue());
+       String numeroPieceFormat = String.format("%03d/CFACI/%s", compteur, annee);
+       String dateFormatee = recu.getDate() != null
+               ? recu.getDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "";
+
+       Cell pieceCell = new Cell().setBorder(Border.NO_BORDER)
+               .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 1f))
+               .setPadding(4)
+               .setVerticalAlignment(VerticalAlignment.TOP);
+
+       pieceCell.add(labelValueRow("DATE :", dateFormatee));
+       pieceCell.add(labelValueRow("PIÈCE DE CAISSE N° :", numeroPieceFormat));
+       pieceCell.add(labelValueRow("MONTANT ENCAISSÉ :", recu.getMontantEncaisse() != null
+               ? format(recu.getMontantEncaisse().doubleValue()) + " FCFA" : ""));
+       pieceCell.add(labelValueRow("MONTANT TOTAL :", recu.getMontantTotal() != null
+               ? format(recu.getMontantTotal().doubleValue()) + " FCFA" : ""));
+       pieceCell.add(labelValueRow("RESTE À PAYER :", recu.getReste() != null
+               ? format(recu.getReste().doubleValue()) + " FCFA" : ""));
+
+       header.addCell(pieceCell);
+       document.add(header);
+
+
 
         // ── INFOS CABINET ──
         float s = 8f;
