@@ -18,6 +18,7 @@ import com.pro.Facture.Entity.Place;
 import com.pro.Facture.Entity.Recu;
 import com.pro.Facture.repository.PlaceRepository;
 import com.pro.Facture.repository.RecuRepository;
+import com.pro.Facture.repository.UtilisateurRepository;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -32,11 +33,13 @@ import java.time.format.DateTimeFormatter;
 @Service
 public class RecuPdfService {
 
+    private final UtilisateurRepository utilisateurRepository;  // ← ajouter
     private final RecuRepository recuRepository;
     private final PlaceRepository placeRepository;
 
-    public RecuPdfService(RecuRepository recuRepository,
+    public RecuPdfService(UtilisateurRepository utilisateurRepository, RecuRepository recuRepository,
                           PlaceRepository placeRepository) {
+        this.utilisateurRepository = utilisateurRepository;
         this.recuRepository = recuRepository;
         this.placeRepository = placeRepository;
     }
@@ -271,13 +274,29 @@ public class RecuPdfService {
                 .setBorder(new SolidBorder(ColorConstants.BLACK, 1))
                 .setMarginBottom(8);
 
+//        infoTable.addCell(new Cell()
+//                .setBorder(Border.NO_BORDER)
+//                .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.5f))
+//                .setPadding(6)
+//                .add(new Paragraph()
+//                        .add(new Text("Bénéficiaire : ").setBold().setFontSize(9))
+//                        .add(new Text(recu.getBeneficiaire() != null ? recu.getBeneficiaire() : "").setFontSize(9))));
+
         infoTable.addCell(new Cell()
                 .setBorder(Border.NO_BORDER)
                 .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.5f))
                 .setPadding(6)
-                .add(new Paragraph()
-                        .add(new Text("Bénéficiaire : ").setBold().setFontSize(9))
-                        .add(new Text(recu.getBeneficiaire() != null ? recu.getBeneficiaire() : "").setFontSize(9))));
+                .add(new Table(UnitValue.createPercentArray(new float[]{1, 1}))
+                        .setWidth(UnitValue.createPercentValue(100))
+                        .addCell(new Cell().setBorder(Border.NO_BORDER).setPadding(0)
+                                .add(new Paragraph()
+                                        .add(new Text("Bénéficiaire : ").setBold().setFontSize(9))
+                                        .add(new Text(recu.getBeneficiaire() != null ? recu.getBeneficiaire() : "").setFontSize(9))))
+                        .addCell(new Cell().setBorder(Border.NO_BORDER).setPadding(0)
+                                .setTextAlignment(TextAlignment.RIGHT)
+                                .add(new Paragraph()
+                                        .add(new Text("Num : ").setBold().setFontSize(9))
+                                        .add(new Text(recu.getNumBenef() != null ? recu.getNumBenef() : "").setFontSize(9))))));;
 
         String montantLettre = convertirEnLettres(recu.getMontantEncaisse());
         infoTable.addCell(new Cell()
@@ -288,6 +307,15 @@ public class RecuPdfService {
                         .add(new Text("La somme de ( en lettre ) : ").setBold().setFontSize(9))
                         .add(new Text(montantLettre).setFontSize(9))));
 
+//        infoTable.addCell(new Cell()
+//                .setBorder(Border.NO_BORDER)
+//                .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.5f))
+//                .setPadding(6)
+//                .setMinHeight(25)
+//                .add(new Paragraph()
+//                        .add(new Text("Motif : ").setBold().setFontSize(9))
+//                        .add(new Text(couperTexte(recu.getMotif(), 95)).setFontSize(9))));
+
         infoTable.addCell(new Cell()
                 .setBorder(Border.NO_BORDER)
                 .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.5f))
@@ -295,7 +323,9 @@ public class RecuPdfService {
                 .setMinHeight(25)
                 .add(new Paragraph()
                         .add(new Text("Motif : ").setBold().setFontSize(9))
-                        .add(new Text(recu.getMotif() != null ? recu.getMotif() : "").setFontSize(9))));
+                        .add(new Text(recu.getMotif() != null ? recu.getMotif() : "").setFontSize(9))
+                )
+        );
 
         // Ligne récapitulatif montants
         Table montantsRow = new Table(UnitValue.createPercentArray(new float[]{1, 1, 1}))
@@ -335,7 +365,12 @@ public class RecuPdfService {
 
         // Utilisateur créateur
         if (recu.getUtilisateur() != null) {
-            document.add(new Paragraph("Établi par : " + recu.getUtilisateur().getEmail())
+            String userEmail = recu.getUtilisateur().getEmail();
+            String userName = utilisateurRepository.findByEmail(userEmail)
+                    .map(u -> u.getNom() + " " + u.getPrenom())
+                    .orElse(userEmail);
+
+            document.add(new Paragraph("Établi par : " + userName)
                     .setFontSize(7)
                     .setFontColor(new DeviceGray(0.5f))
                     .setTextAlignment(TextAlignment.LEFT)
@@ -417,4 +452,5 @@ public class RecuPdfService {
         return centainesEnLettres(m) + "-milliard" + (m > 1 ? "s" : "")
                 + (r > 0 ? "-" + centainesEnLettres(r) : "");
     }
+
 }

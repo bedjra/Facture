@@ -22,6 +22,8 @@ public class Recu {
     private LocalDate date;
 
     private String beneficiaire;
+    @Column(name = "num_benef")
+    private String numBenef;
 
     @Column(name = "montant_encaisse", precision = 15, scale = 2)
     private BigDecimal montantEncaisse;

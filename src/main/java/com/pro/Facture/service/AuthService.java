@@ -29,14 +29,16 @@ public class AuthService {
         Role role;
         try {
             role = Role.valueOf(dto.getRole().toUpperCase());
-            // toUpperCase pour éviter problème "cptr" vs "CPTR"
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Rôle invalide");
         }
 
         Utilisateur utilisateur = new Utilisateur(
+                dto.getNom(),
+                dto.getPrenom(),
                 dto.getEmail(),
                 passwordEncoder.encode(dto.getPassword()),
+                dto.getNumeroTelephone(),
                 role
         );
 
@@ -44,7 +46,6 @@ public class AuthService {
 
         return convertToDTO(savedUser);
     }
-
 
     // 🔹 Récupérer un utilisateur par email
     public UtilisateurDto getByEmail(String email) {
@@ -62,27 +63,29 @@ public class AuthService {
                 .collect(Collectors.toList());
     }
 
-    // 🔹 Convertir Entity → DTO
-    private UtilisateurDto convertToDTO(Utilisateur utilisateur) {
-        UtilisateurDto dto = new UtilisateurDto();
-        dto.setId(utilisateur.getId());
-        dto.setEmail(utilisateur.getEmail());
-        dto.setRole(Role.valueOf(String.valueOf(utilisateur.getRole())));
-        return dto;
-
-    }
-
+    // 🔹 Supprimer un utilisateur
     public void deleteUser(Long id) {
         utilisateurRepository.deleteById(id);
     }
 
     // 🔹 Mettre à jour un utilisateur par ID
     public UtilisateurDto updateUserById(Long id, UtilisateurCreateDto dto) {
+
         // 1️⃣ Récupérer l'utilisateur existant
         Utilisateur utilisateur = utilisateurRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé"));
 
-        // 2️⃣ Mettre à jour l'email si fourni et non utilisé par un autre utilisateur
+        // 2️⃣ Mettre à jour le nom si fourni
+        if (dto.getNom() != null && !dto.getNom().isBlank()) {
+            utilisateur.setNom(dto.getNom());
+        }
+
+        // 3️⃣ Mettre à jour le prénom si fourni
+        if (dto.getPrenom() != null && !dto.getPrenom().isBlank()) {
+            utilisateur.setPrenom(dto.getPrenom());
+        }
+
+        // 4️⃣ Mettre à jour l'email si fourni et non utilisé par un autre utilisateur
         if (dto.getEmail() != null && !dto.getEmail().equals(utilisateur.getEmail())) {
             if (utilisateurRepository.findByEmail(dto.getEmail()).isPresent()) {
                 throw new IllegalArgumentException("Email déjà utilisé");
@@ -90,12 +93,17 @@ public class AuthService {
             utilisateur.setEmail(dto.getEmail());
         }
 
-        // 3️⃣ Mettre à jour le mot de passe si fourni
+        // 5️⃣ Mettre à jour le numéro de téléphone si fourni
+        if (dto.getNumeroTelephone() != null && !dto.getNumeroTelephone().isBlank()) {
+            utilisateur.setNumeroTelephone(dto.getNumeroTelephone());
+        }
+
+        // 6️⃣ Mettre à jour le mot de passe si fourni
         if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
             utilisateur.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
 
-        // 4️⃣ Mettre à jour le rôle si fourni
+        // 7️⃣ Mettre à jour le rôle si fourni
         if (dto.getRole() != null && !dto.getRole().isBlank()) {
             try {
                 Role role = Role.valueOf(dto.getRole().toUpperCase());
@@ -105,11 +113,19 @@ public class AuthService {
             }
         }
 
-        // 5️⃣ Sauvegarder les modifications
-        Utilisateur updatedUser = utilisateurRepository.save(utilisateur);
-
-        // 6️⃣ Retourner le DTO
-        return convertToDTO(updatedUser);
+        // 8️⃣ Sauvegarder et retourner le DTO
+        return convertToDTO(utilisateurRepository.save(utilisateur));
     }
 
+    // 🔹 Convertir Entity → DTO
+    private UtilisateurDto convertToDTO(Utilisateur utilisateur) {
+        UtilisateurDto dto = new UtilisateurDto();
+        dto.setId(utilisateur.getId());
+        dto.setNom(utilisateur.getNom());
+        dto.setPrenom(utilisateur.getPrenom());
+        dto.setEmail(utilisateur.getEmail());
+        dto.setNumeroTelephone(utilisateur.getNumeroTelephone());
+        dto.setRole(utilisateur.getRole());
+        return dto;
+    }
 }

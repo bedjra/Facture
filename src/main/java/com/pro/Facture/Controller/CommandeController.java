@@ -11,6 +11,7 @@ import com.pro.Facture.service.PlaceService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -57,6 +58,16 @@ public class CommandeController {
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
     }
+
+    // PUT - Modifier une commande
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CommandeResponseDto> update(
+            @PathVariable Long id,
+            @RequestBody CommandeRequestDto dto) {
+        return ResponseEntity.ok(commandeService.updateCommande(id, dto));
+    }
+
 
     // GET ALL
     @GetMapping

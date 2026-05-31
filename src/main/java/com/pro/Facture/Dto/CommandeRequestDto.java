@@ -7,21 +7,14 @@ public class CommandeRequestDto {
 
     private Long clientId;
     private LocalDate dateFacture;
-    private Double retenue;      // % Retenue à source
+    private Double retenue;
     private Double avance;
     private List<LigneCommandeDto> lignes;
     private Double tauxTva;
+    private LocalDate datePaiement;
 
-    public Long getClientId() {
+    public Long getClientId() {  // ✅ supprimé le "Q" parasite
         return clientId;
-    }
-
-    public Double getTauxTva() {
-        return tauxTva;
-    }
-
-    public void setTauxTva(Double tauxTva) {
-        this.tauxTva = tauxTva;
     }
 
     public void setClientId(Long clientId) {
@@ -34,6 +27,14 @@ public class CommandeRequestDto {
 
     public void setDateFacture(LocalDate dateFacture) {
         this.dateFacture = dateFacture;
+    }
+
+    public Double getTauxTva() {
+        return tauxTva;
+    }
+
+    public void setTauxTva(Double tauxTva) {
+        this.tauxTva = tauxTva;
     }
 
     public List<LigneCommandeDto> getLignes() {
@@ -58,5 +59,14 @@ public class CommandeRequestDto {
 
     public void setAvance(Double avance) {
         this.avance = avance;
+    }
+
+    // ✅ getter/setter manquants pour datePaiement
+    public LocalDate getDatePaiement() {
+        return datePaiement;
+    }
+
+    public void setDatePaiement(LocalDate datePaiement) {
+        this.datePaiement = datePaiement;
     }
 }

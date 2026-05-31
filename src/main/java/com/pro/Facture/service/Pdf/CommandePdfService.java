@@ -5,6 +5,9 @@ import com.itextpdf.text.pdf.*;
 import com.pro.Facture.Dto.CommandeResponseDto;
 import com.pro.Facture.Dto.LigneCommandeResponseDto;
 import com.pro.Facture.Entity.Place;
+import com.pro.Facture.repository.UtilisateurRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -16,8 +19,13 @@ import java.time.format.DateTimeFormatter;
 @Service
 public class CommandePdfService {
 
+    private final UtilisateurRepository utilisateurRepository;  // ← ajouter
     private static final String PDF_BASE_FOLDER = "pdfFactures/";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    public CommandePdfService(UtilisateurRepository utilisateurRepository) {
+        this.utilisateurRepository = utilisateurRepository;
+    }
 
     public byte[] genererPdf(CommandeResponseDto dto, Place place) {
 
@@ -77,11 +85,18 @@ public class CommandePdfService {
             infoCell.setUseDescender(true);     // ← Clé : supprime l'espace résiduel sous les glyphes
 
 // --------- Titre principal ----------
-            Font fTitre = new Font(Font.FontFamily.HELVETICA, 26, Font.BOLD, new BaseColor(54, 54, 54));
+            Font fTitre = new Font(
+                    Font.FontFamily.HELVETICA,
+                    26,
+                    Font.BOLD,
+                    new BaseColor(10, 174, 238)
+            );
+
             Paragraph titrePrincipal = new Paragraph("CFACI GROUP CONSULTING", fTitre);
             titrePrincipal.setAlignment(Element.ALIGN_CENTER);
             titrePrincipal.setSpacingBefore(0f);
-            titrePrincipal.setSpacingAfter(2f);   // Petit espace entre titre et sous-titre
+            titrePrincipal.setSpacingAfter(2f);
+
             infoCell.addElement(titrePrincipal);
 
 // --------- Sous-titre en gras ----------
@@ -91,6 +106,18 @@ public class CommandePdfService {
             description.setSpacingBefore(0f);
             description.setSpacingAfter(0f);
             infoCell.addElement(description);
+
+            // --------- Email ----------
+            Paragraph email = new Paragraph(
+                    "e-mail : " + place.getEmail(),
+                    fNormal
+            );
+
+            email.setAlignment(Element.ALIGN_CENTER);
+            email.setSpacingBefore(2f);
+            email.setSpacingAfter(0f);
+
+            infoCell.addElement(email);
 
 // ====== Ajouter la cellule au header ======
             header.addCell(infoCell);
@@ -248,11 +275,35 @@ public class CommandePdfService {
             leftCell.addElement(left);
             lineTable.addCell(leftCell);
 
+            Authentication authentication =
+                    SecurityContextHolder.getContext().getAuthentication();
+
+            String userEmail = authentication != null
+                    ? authentication.getName()
+                    : "";
+
+            // Récupère le nom complet depuis la base
+            String userName = userEmail;
+            if (!userEmail.isEmpty()) {
+                utilisateurRepository.findByEmail(userEmail).ifPresent(u ->
+                        System.out.println(u.getNom()) // juste pour vérifier
+                );
+                userName = utilisateurRepository.findByEmail(userEmail)
+                        .map(u -> u.getNom() + " " + u.getPrenom())
+                        .orElse(userEmail);
+            }
+
             PdfPCell rightCell = new PdfPCell();
             rightCell.setBorder(Rectangle.NO_BORDER);
             rightCell.setPadding(0);
-            Paragraph right = new Paragraph("e-mail:" + place.getEmail(), fNormal);
+
+            Paragraph right = new Paragraph(
+                    "Facture réalisée par : " + userName,
+                    fNormal
+            );;
+
             right.setAlignment(Element.ALIGN_RIGHT);
+
             rightCell.addElement(right);
             lineTable.addCell(rightCell);
 
@@ -378,7 +429,7 @@ public class CommandePdfService {
 
         Paragraph l1 = new Paragraph(
                 "Audit, Assistance Comptable, fiscale et Sociale-Travaux d'inventaire, "
-                        + "Récrutement et Formations", font);
+                        + "Recrutement et Formations", font);
         l1.setAlignment(Element.ALIGN_CENTER);
         cell.addElement(l1);
 
@@ -388,7 +439,8 @@ public class CommandePdfService {
         cell.addElement(l2);
 
         Paragraph l3 = new Paragraph(
-                "Tel: 97 82 28 28 ;  "
+                "Tel: 97 82 28 28 ;  " +
+                      "Cel  : 91 47 03 03 ;  "
                         + place.getEmail()
                         + "  NIF: 1001727149  •  N°CNSS: 474195", font);
         l3.setAlignment(Element.ALIGN_CENTER);

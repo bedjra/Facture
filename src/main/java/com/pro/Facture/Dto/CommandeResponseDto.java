@@ -12,9 +12,11 @@ public class CommandeResponseDto {
     private int id;
     private String ref;
     private LocalDate dateFacture;
-
+    private String statut; // ✅ ajouter ce champ
     private ClientDto client;
     private String pdfBase64;
+
+    private List<PaiementCommandeResponseDto> historiquePaiements; // 🔥
 
 //    private List<LigneCommandeResponseDto> lignes;
 private List<LigneCommandeResponseDto> lignes = new ArrayList<>();

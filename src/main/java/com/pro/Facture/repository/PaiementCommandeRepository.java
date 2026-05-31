@@ -43,4 +43,9 @@ public interface PaiementCommandeRepository extends JpaRepository<PaiementComman
     // Récupérer les paiements via la commande liée au client
     @Query("SELECT p FROM PaiementCommande p WHERE p.commande.client.id = :clientId ORDER BY p.datePaiement DESC")
     List<PaiementCommande> findByClientId(@Param("clientId") Long clientId);
+
+
+    void deleteByCommandeId(Long commandeId);
+
+    List<PaiementCommande> findByCommandeId(Long commandeId);
 }

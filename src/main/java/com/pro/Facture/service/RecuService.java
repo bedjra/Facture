@@ -26,7 +26,6 @@ public class RecuService {
     public RecuService(RecuRepository recuRepository,
                        UtilisateurRepository utilisateurRepository,
                        PlaceRepository placeRepository) {
-
         this.recuRepository = recuRepository;
         this.utilisateurRepository = utilisateurRepository;
         this.placeRepository = placeRepository;
@@ -35,49 +34,38 @@ public class RecuService {
     // =========================
     // CREATE
     // =========================
-
     public RecuDto create(RecuDto dto) {
 
         Recu recu = mapToEntity(dto);
 
-        // 🔐 Utilisateur connecté
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String email = auth.getName();
 
         Utilisateur user = utilisateurRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
-
         recu.setUtilisateur(user);
 
-        // 📍 Associer la place
         Place place = placeRepository.findFirstByOrderByIdAsc()
                 .orElseThrow(() -> new RuntimeException("Aucune place configurée"));
-
         recu.setPlace(place);
 
         recu = recuRepository.save(recu);
-
         return mapToDto(recu);
     }
 
     // =========================
     // READ BY ID
     // =========================
-
     public RecuDto getById(Long id) {
-
         Recu recu = recuRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Reçu non trouvé"));
-
         return mapToDto(recu);
     }
 
     // =========================
     // READ ALL
     // =========================
-
     public List<RecuDto> getAll() {
-
         return recuRepository.findAll()
                 .stream()
                 .map(this::mapToDto)
@@ -87,7 +75,6 @@ public class RecuService {
     // =========================
     // UPDATE
     // =========================
-
     public RecuDto update(Long id, RecuDto dto) {
 
         Recu recu = recuRepository.findById(id)
@@ -96,37 +83,29 @@ public class RecuService {
         recu.setNumeroPiece(dto.getNumeroPiece());
         recu.setDate(dto.getDate());
         recu.setBeneficiaire(dto.getBeneficiaire());
-
+        recu.setNumBenef(dto.getNumBenef());           // ← nouveau
         recu.setMontantEncaisse(dto.getMontantEncaisse());
-
-        // ✅ nouveaux champs
         recu.setMontantTotal(dto.getMontantTotal());
         recu.setReste(dto.getReste());
-
         recu.setMode(dto.getMode());
         recu.setMotif(dto.getMotif());
 
         recu = recuRepository.save(recu);
-
         return mapToDto(recu);
     }
 
     // =========================
     // DELETE
     // =========================
-
     public void delete(Long id) {
-
         Recu recu = recuRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Reçu non trouvé"));
-
         recuRepository.delete(recu);
     }
 
     // =========================
     // MAPPER ENTITY
     // =========================
-
     private Recu mapToEntity(RecuDto dto) {
 
         Recu recu = new Recu();
@@ -134,13 +113,10 @@ public class RecuService {
         recu.setNumeroPiece(dto.getNumeroPiece());
         recu.setDate(dto.getDate());
         recu.setBeneficiaire(dto.getBeneficiaire());
-
+        recu.setNumBenef(dto.getNumBenef());           // ← nouveau
         recu.setMontantEncaisse(dto.getMontantEncaisse());
-
-        // ✅ nouveaux champs
         recu.setMontantTotal(dto.getMontantTotal());
         recu.setReste(dto.getReste());
-
         recu.setMode(dto.getMode());
         recu.setMotif(dto.getMotif());
 
@@ -150,36 +126,29 @@ public class RecuService {
     // =========================
     // MAPPER DTO
     // =========================
-
     private RecuDto mapToDto(Recu recu) {
 
         RecuDto dto = new RecuDto();
 
         dto.setId(recu.getId());
 
-        // ✅ Numéro affichage PDF
         String numeroAffichage = String.format(
                 "%03d/CFACI/%d",
                 recu.getId(),
                 Year.now().getValue()
         );
-
         dto.setNumeroPieceAffichage(numeroAffichage);
 
         dto.setNumeroPiece(recu.getNumeroPiece());
         dto.setDate(recu.getDate());
         dto.setBeneficiaire(recu.getBeneficiaire());
-
+        dto.setNumBenef(recu.getNumBenef());           // ← nouveau
         dto.setMontantEncaisse(recu.getMontantEncaisse());
-
-        // ✅ nouveaux champs
         dto.setMontantTotal(recu.getMontantTotal());
         dto.setReste(recu.getReste());
-
         dto.setMode(recu.getMode());
         dto.setMotif(recu.getMotif());
 
-        // ✅ utilisateur
         if (recu.getUtilisateur() != null) {
             dto.setUtilisateur(mapUtilisateur(recu.getUtilisateur()));
         }
@@ -190,15 +159,12 @@ public class RecuService {
     // =========================
     // MAPPER UTILISATEUR
     // =========================
-
     private UtilisateurDto mapUtilisateur(Utilisateur user) {
 
         UtilisateurDto dto = new UtilisateurDto();
-
         dto.setId(user.getId());
         dto.setEmail(user.getEmail());
         dto.setRole(user.getRole());
-
         return dto;
     }
 }
