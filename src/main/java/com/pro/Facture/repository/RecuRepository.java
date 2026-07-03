@@ -14,4 +14,7 @@ public interface RecuRepository extends JpaRepository<Recu, Long> {
 
     // Compter les reçus d'une Place (pour générer la référence)
     long countByPlace_Id(Long placeId);
+
+    boolean existsByNumeroPiece(String numeroPiece);
+
 }

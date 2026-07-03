@@ -61,16 +61,20 @@ public class ChargeService {
         return new ChargeDTO(
                 charge.getId(),
                 charge.getDescription(),
+                charge.getBeneficiaire(),
+                charge.getMotif(),
                 charge.getMontant(),
-                charge.getDateCharge(),
-                null
+                charge.getDateCharge()
         );
     }
+
 
     private Charge mapToEntity(ChargeDTO dto) {
         Charge charge = new Charge();
         charge.setId(dto.getId());
         charge.setDescription(dto.getDescription());
+        charge.setBeneficiaire(dto.getBeneficiaire());
+        charge.setMotif(dto.getMotif());
         charge.setMontant(dto.getMontant());
         charge.setDateCharge(dto.getDateCharge());
         return charge;

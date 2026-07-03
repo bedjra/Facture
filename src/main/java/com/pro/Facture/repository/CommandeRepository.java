@@ -3,39 +3,39 @@ package com.pro.Facture.repository;
 import com.pro.Facture.Entity.Commande;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
 
 public interface CommandeRepository extends JpaRepository<Commande, Long> {
+
     // Les 3 dernières commandes (par ID décroissant)
     List<Commande> findTop3ByOrderByIdDesc();
 
-   // ----- TOTALS -----
-   @Query("SELECT COALESCE(SUM(c.mtTtc),0) FROM Commande c")
-   double totalFacture();
+
+    // ----- TOTALS -----
+    @Query("SELECT COALESCE(SUM(c.mtTtc),0) FROM Commande c")
+    double totalFacture();
 
     @Query("SELECT COUNT(c) FROM Commande c")
     long nombreFactures();
 
     @Query("""
-    SELECT COALESCE(SUM(c.mtTtc),0)
-    FROM Commande c
-    WHERE MONTH(c.dateFacture) = MONTH(CURRENT_DATE)
-      AND YEAR(c.dateFacture) = YEAR(CURRENT_DATE)
-""")
+        SELECT COALESCE(SUM(c.mtTtc),0)
+        FROM Commande c
+        WHERE MONTH(c.dateFacture) = MONTH(CURRENT_DATE)
+          AND YEAR(c.dateFacture) = YEAR(CURRENT_DATE)
+    """)
     double totalFactureMoisActuel();
 
     @Query("""
-    SELECT COALESCE(SUM(c.mtTtc),0)
-    FROM Commande c
-    WHERE MONTH(c.dateFacture) = MONTH(CURRENT_DATE) - 1
-      AND YEAR(c.dateFacture) = YEAR(CURRENT_DATE)
-""")
+        SELECT COALESCE(SUM(c.mtTtc),0)
+        FROM Commande c
+        WHERE MONTH(c.dateFacture) = MONTH(CURRENT_DATE) - 1
+          AND YEAR(c.dateFacture) = YEAR(CURRENT_DATE)
+    """)
     double totalFactureMoisPrecedent();
-
-
-
 
     @Query("SELECT COALESCE(SUM(c.avance),0) FROM Commande c")
     double totalPaye();
@@ -43,20 +43,16 @@ public interface CommandeRepository extends JpaRepository<Commande, Long> {
     @Query("SELECT COUNT(c) FROM Commande c WHERE c.net = 0")
     long nombreFacturesPayees();
 
-
     @Query("SELECT COALESCE(SUM(c.net),0) FROM Commande c")
     double totalImpaye();
 
-
     @Query("""
-    SELECT COUNT(c)
-    FROM Commande c
-    WHERE c.net > 0
-      AND c.dateFacture < CURRENT_DATE
-""")
+        SELECT COUNT(c)
+        FROM Commande c
+        WHERE c.net > 0
+          AND c.dateFacture < CURRENT_DATE
+    """)
     long facturesEnRetard();
-
-
 
     @Query("SELECT COUNT(c) FROM Commande c")
     Long countFactures();
@@ -64,10 +60,11 @@ public interface CommandeRepository extends JpaRepository<Commande, Long> {
     @Query("SELECT COALESCE(SUM(c.mtTtc), 0) FROM Commande c")
     Double sumFactures();
 
-
     List<Commande> findByClientId(Long clientId);
 
 
 
-
+    // ----- RÉFÉRENCE -----
+    @Query("SELECT COUNT(c) > 0 FROM Commande c WHERE c.ref = :ref")
+    boolean existsByReference(@Param("ref") String reference);
 }

@@ -5,6 +5,7 @@ import com.itextpdf.text.pdf.*;
 import com.pro.Facture.Dto.CommandeResponseDto;
 import com.pro.Facture.Dto.LigneCommandeResponseDto;
 import com.pro.Facture.Entity.Place;
+import com.pro.Facture.repository.CommandeRepository;
 import com.pro.Facture.repository.UtilisateurRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,9 +23,11 @@ public class CommandePdfService {
     private final UtilisateurRepository utilisateurRepository;  // ← ajouter
     private static final String PDF_BASE_FOLDER = "pdfFactures/";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private final CommandeRepository commandeRepository;
 
-    public CommandePdfService(UtilisateurRepository utilisateurRepository) {
+    public CommandePdfService(UtilisateurRepository utilisateurRepository, CommandeRepository commandeRepository) {
         this.utilisateurRepository = utilisateurRepository;
+        this.commandeRepository = commandeRepository;
     }
 
     public byte[] genererPdf(CommandeResponseDto dto, Place place) {
@@ -52,7 +55,6 @@ public class CommandePdfService {
             header.setWidths(new float[]{1.2f, 2.8f});
             header.setSpacingAfter(10);
 
-            // Cellule logo
             // Cellule logo
             PdfPCell logoCell = new PdfPCell();
             logoCell.setBorder(Rectangle.BOTTOM);          // ← ajouter BOTTOM ici
@@ -108,16 +110,16 @@ public class CommandePdfService {
             infoCell.addElement(description);
 
             // --------- Email ----------
-            Paragraph email = new Paragraph(
-                    "e-mail : " + place.getEmail(),
-                    fNormal
-            );
-
-            email.setAlignment(Element.ALIGN_CENTER);
-            email.setSpacingBefore(2f);
-            email.setSpacingAfter(0f);
-
-            infoCell.addElement(email);
+//            Paragraph email = new Paragraph(
+//                    "e-mail : " + place.getEmail(),
+//                    fNormal
+//            );
+//
+//            email.setAlignment(Element.ALIGN_CENTER);
+//            email.setSpacingBefore(2f);
+//            email.setSpacingAfter(0f);
+//
+//            infoCell.addElement(email);
 
 // ====== Ajouter la cellule au header ======
             header.addCell(infoCell);
@@ -171,12 +173,18 @@ public class CommandePdfService {
 
             info.addCell(clientWrapper);
 
+
+            int numRef = (int) commandeRepository.count() + 1;
+
+
+
+
             // --- Numéro de facture centré à droite ---
             PdfPCell numCell = new PdfPCell();
             numCell.setBorder(Rectangle.NO_BORDER);
             numCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
             numCell.setHorizontalAlignment(Element.ALIGN_CENTER);
-            Paragraph numFacture = new Paragraph("Facture N°: FA/" + dto.getRef(), fHighlight);
+            Paragraph numFacture = new Paragraph(" N°: " + dto.getRef(), fHighlight);
             numFacture.setAlignment(Element.ALIGN_CENTER);
             numCell.addElement(numFacture);
             info.addCell(numCell);
@@ -317,6 +325,7 @@ public class CommandePdfService {
             amountLine.setBorder(Rectangle.NO_BORDER);
             amountLine.setPaddingTop(6);
             long montant = Math.round(dto.getTotalNetAPayer());
+            // AVANT
             Paragraph amountText = new Paragraph(
                     "Arrêté la présente facture à la somme de : "
                             + nombreEnLettres(montant).toUpperCase() + " FCFA",
@@ -344,7 +353,7 @@ public class CommandePdfService {
             signTitle.setAlignment(Element.ALIGN_CENTER);
             signCell.addElement(signTitle);
 
-            signCell.addElement(space(120));
+            signCell.addElement(space(60));
 
             Font fSmallBold = new Font(Font.FontFamily.HELVETICA, 10, Font.BOLD);
             Paragraph signName = new Paragraph("MOVIA Kodzo A E", fSmallBold);
@@ -429,12 +438,12 @@ public class CommandePdfService {
 
         Paragraph l1 = new Paragraph(
                 "Audit, Assistance Comptable, fiscale et Sociale-Travaux d'inventaire, "
-                        + "Recrutement et Formations", font);
+                        + "Recrutement et Formation", font);
         l1.setAlignment(Element.ALIGN_CENTER);
         cell.addElement(l1);
 
         Paragraph l2 = new Paragraph(
-                " Zanguera, Attilamounou (LOME-TOGO)", font);
+                " Zanguera - Attilamounou (LOME-TOGO)", font);
         l2.setAlignment(Element.ALIGN_CENTER);
         cell.addElement(l2);
 
@@ -450,8 +459,9 @@ public class CommandePdfService {
         footer.writeSelectedRows(0, -1, 30, 55, writer.getDirectContent());
     }
 
+    // APRÈS - séparateur . au lieu de ,
     private String format(double d) {
-        return String.format("%,.0f", d);
+        return String.format("%,.0f", d).replace(",", ".");
     }
 
     private String formatDate(java.time.LocalDate date) {
@@ -478,21 +488,46 @@ public class CommandePdfService {
         };
 
         if (number < 20) return units[(int) number];
+
         if (number < 100) {
             int t = (int) number / 10;
             int u = (int) number % 10;
-            return tens[t] + (u != 0 ? "-" + units[u] : "");
+            if (t == 7 || t == 9) {
+                // 70-79 → soixante-dix... / 90-99 → quatre-vingt-dix...
+                return tens[t] + (u != 0 ? "-" + units[10 + u] : (t == 8 ? "s" : ""));
+            }
+            return tens[t] + (u == 1 && t != 8 ? "-et-un" : (u != 0 ? "-" + units[u] : (t == 8 ? "s" : "")));
         }
-        if (number < 1000) {
+
+        if (number < 1_000) {
             int h = (int) number / 100;
             int r = (int) number % 100;
-            return (h > 1 ? units[h] + " " : "") + "cent" + (r != 0 ? " " + nombreEnLettres(r) : "");
+            String centStr = (h > 1 ? units[h] + " " : "") + "cent";
+            if (r == 0 && h > 1) centStr += "s"; // deux cents, trois cents...
+            return centStr + (r != 0 ? " " + nombreEnLettres(r) : "");
         }
+
         if (number < 1_000_000) {
-            long m = number / 1000;
-            long r = number % 1000;
-            return (m > 1 ? nombreEnLettres(m) + " " : "") + "mille" + (r != 0 ? " " + nombreEnLettres(r) : "");
+            long m = number / 1_000;
+            long r = number % 1_000;
+            String milleStr = (m > 1 ? nombreEnLettres(m) + " " : "") + "mille";
+            return milleStr + (r != 0 ? " " + nombreEnLettres(r) : "");
         }
-        return String.valueOf(number);
+
+        if (number < 1_000_000_000) {
+            long m = number / 1_000_000;
+            long r = number % 1_000_000;
+            String millionStr = nombreEnLettres(m) + " million" + (m > 1 ? "s" : "");
+            return millionStr + (r != 0 ? " " + nombreEnLettres(r) : "");
+        }
+
+        // Milliards
+        long m = number / 1_000_000_000;
+        long r = number % 1_000_000_000;
+        String milliardStr = nombreEnLettres(m) + " milliard" + (m > 1 ? "s" : "");
+        return milliardStr + (r != 0 ? " " + nombreEnLettres(r) : "");
     }
+
+
+
 }

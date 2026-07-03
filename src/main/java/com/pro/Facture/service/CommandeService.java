@@ -353,8 +353,20 @@ public class CommandeService {
     // ----------------------------
     // HELPERS
     // ----------------------------
-    private String generateRef(Long id) {
-        return String.format("%05d", id);
+//    private String generateRef(Long id) {
+//        return String.format("%05d", id);
+//    }
+
+    public String generateRef(Long id) {
+
+        int numero = 1;
+
+        while (commandeRepository.existsByReference(
+                "FA-2026-" + String.format("%06d", numero))) {
+            numero++;
+        }
+
+        return "FA-2026-" + String.format("%06d", numero);
     }
 
     private ClientDto mapClient(Client client) {
@@ -372,6 +384,11 @@ public class CommandeService {
         dto.setId(user.getId());
         dto.setEmail(user.getEmail());
         dto.setRole(user.getRole());
+        dto.setNom(user.getNom());           // ✅ ajout
+        dto.setPrenom(user.getPrenom());     // ✅ ajout
+        dto.setNumeroTelephone(user.getNumeroTelephone()); // ✅ ajout
         return dto;
     }
+
+
 }

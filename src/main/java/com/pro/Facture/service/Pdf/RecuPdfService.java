@@ -33,7 +33,7 @@ import java.time.format.DateTimeFormatter;
 @Service
 public class RecuPdfService {
 
-    private final UtilisateurRepository utilisateurRepository;  // ← ajouter
+    private final UtilisateurRepository utilisateurRepository;
     private final RecuRepository recuRepository;
     private final PlaceRepository placeRepository;
 
@@ -44,9 +44,33 @@ public class RecuPdfService {
         this.placeRepository = placeRepository;
     }
 
+    // =========================================================
+    //  GÉNÉRATION DU NUMÉRO DE PIÈCE
+    // =========================================================
+    public String generateNumeroPiece() {
+        int numero = 1;
+        String annee = String.valueOf(Year.now().getValue());
+
+        while (recuRepository.existsByNumeroPiece(
+                String.format("%03d/CFACI/%s", numero, annee))) {
+            numero++;
+        }
+
+        return String.format("%03d/CFACI/%s", numero, annee);
+    }
+
+    // =========================================================
+    //  GÉNÉRATION DU PDF
+    // =========================================================
     public byte[] generatePdf(Long id) {
         Recu recu = recuRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Reçu non trouvé"));
+
+        // Assigner le numéro de pièce si pas encore fait
+        if (recu.getNumeroPiece() == null) {
+            recu.setNumeroPiece(generateNumeroPiece());
+            recuRepository.save(recu);
+        }
 
         Place place = placeRepository.findFirstByOrderByIdAsc()
                 .orElseThrow(() -> new RuntimeException("Cabinet non configuré"));
@@ -60,8 +84,7 @@ public class RecuPdfService {
                 Files.createDirectories(folderPath);
             }
 
-            String fileName = "Recu_" + (recu.getNumeroPiece() != null
-                    ? recu.getNumeroPiece().replace("/", "-") : id) + ".pdf";
+            String fileName = "Recu_" + recu.getNumeroPiece().replace("/", "-") + ".pdf";
             File destinationFile = new File(folderName, fileName);
 
             PdfWriter writer = new PdfWriter(out);
@@ -102,14 +125,6 @@ public class RecuPdfService {
                 .setPaddingTop(4)
                 .setPaddingBottom(4);
 
-//        Paragraph cutLine = new Paragraph("✂  Découper ici  ✂")
-//                .setFontSize(7)
-//                .setFontColor(new DeviceGray(0.5f))
-//                .setTextAlignment(TextAlignment.CENTER)
-//                .setMarginTop(2)
-//                .setMarginBottom(0);
-//
-//        sepCell.add(cutLine);
         sep.addCell(sepCell);
         document.add(sep);
     }
@@ -127,15 +142,11 @@ public class RecuPdfService {
                 .setTextAlignment(TextAlignment.RIGHT)
                 .setMarginBottom(2));
 
-        // ============================================================
-        // EN-TÊTE : [LOGO à gauche] | [TITRE + SOUS-TITRE à droite]
-        // Les deux cellules partagent la même ligne de fond (bordure bas)
-        // ============================================================
+        // ── EN-TÊTE : LOGO + TITRE ──
         Table headerTitre = new Table(UnitValue.createPercentArray(new float[]{22, 78}))
                 .setWidth(UnitValue.createPercentValue(100))
                 .setMarginBottom(3);
 
-        // Cellule logo
         Cell logoCell = new Cell()
                 .setBorder(Border.NO_BORDER)
                 .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 1f))
@@ -145,23 +156,16 @@ public class RecuPdfService {
 
         if (place.getLogo() != null && place.getLogo().length > 0) {
             try {
-
                 Image logo = new Image(ImageDataFactory.create(place.getLogo()));
-
-                // équivalent de scaleToFit(100,100)
                 logo.setAutoScale(true);
                 logo.setMaxWidth(100);
                 logo.setMaxHeight(100);
-
                 logoCell.add(logo);
-
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) {}
         }
 
         headerTitre.addCell(logoCell);
 
-        // Cellule titre
         Cell titreCell = new Cell()
                 .setBorder(Border.NO_BORDER)
                 .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 1f))
@@ -185,9 +189,7 @@ public class RecuPdfService {
         headerTitre.addCell(titreCell);
         document.add(headerTitre);
 
-        // ============================================================
-        // SECTION INFOS : [infos cabinet gauche] | [infos pièce droite]
-        // ============================================================
+        // ── SECTION INFOS ──
         float s = 8f;
         float lineSpacing = 1.5f;
 
@@ -196,9 +198,7 @@ public class RecuPdfService {
         String tels      = !telephone.isEmpty() && !cel.isEmpty()
                 ? telephone + " / " + cel : telephone + cel;
 
-        int compteur = Math.toIntExact(recu.getId() != null ? recu.getId() : 1);
-        String annee = String.valueOf(Year.now().getValue());
-        String numeroPieceFormat = String.format("%03d/CFACI/%s", compteur, annee);
+        String numeroPieceFormat = recu.getNumeroPiece() != null ? recu.getNumeroPiece() : "-";
         String dateFormatee = recu.getDate() != null
                 ? recu.getDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "";
 
@@ -256,14 +256,6 @@ public class RecuPdfService {
 
         pieceCell.add(labelValueRow("DATE :", dateFormatee));
         pieceCell.add(labelValueRow("PIÈCE DE CAISSE N° :", numeroPieceFormat));
-//        pieceCell.add(labelValueRow("MONTANT ENCAISSÉ :", recu.getMontantEncaisse() != null
-//                ? format(recu.getMontantEncaisse().doubleValue()) + " FCFA" : ""));
-//        pieceCell.add(labelValueRow("MONTANT TOTAL :", recu.getMontantTotal() != null
-//                ? format(recu.getMontantTotal().doubleValue()) + " FCFA" : ""));
-//        pieceCell.add(labelValueRow("RESTE À PAYER :", recu.getReste() != null
-//                ? format(recu.getReste().doubleValue()) + " FCFA" : ""));
-//        pieceCell.add(labelValueRow("MODE DE PAIEMENT :", recu.getMode() != null
-//                ? recu.getMode() : ""));
 
         infoHeader.addCell(pieceCell);
         document.add(infoHeader);
@@ -273,14 +265,6 @@ public class RecuPdfService {
                 .setWidth(UnitValue.createPercentValue(100))
                 .setBorder(new SolidBorder(ColorConstants.BLACK, 1))
                 .setMarginBottom(8);
-
-//        infoTable.addCell(new Cell()
-//                .setBorder(Border.NO_BORDER)
-//                .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.5f))
-//                .setPadding(6)
-//                .add(new Paragraph()
-//                        .add(new Text("Bénéficiaire : ").setBold().setFontSize(9))
-//                        .add(new Text(recu.getBeneficiaire() != null ? recu.getBeneficiaire() : "").setFontSize(9))));
 
         infoTable.addCell(new Cell()
                 .setBorder(Border.NO_BORDER)
@@ -296,7 +280,7 @@ public class RecuPdfService {
                                 .setTextAlignment(TextAlignment.RIGHT)
                                 .add(new Paragraph()
                                         .add(new Text("Num : ").setBold().setFontSize(9))
-                                        .add(new Text(recu.getNumBenef() != null ? recu.getNumBenef() : "").setFontSize(9))))));;
+                                        .add(new Text(recu.getNumBenef() != null ? recu.getNumBenef() : "").setFontSize(9))))));
 
         String montantLettre = convertirEnLettres(recu.getMontantEncaisse());
         infoTable.addCell(new Cell()
@@ -307,15 +291,6 @@ public class RecuPdfService {
                         .add(new Text("La somme de ( en lettre ) : ").setBold().setFontSize(9))
                         .add(new Text(montantLettre).setFontSize(9))));
 
-//        infoTable.addCell(new Cell()
-//                .setBorder(Border.NO_BORDER)
-//                .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.5f))
-//                .setPadding(6)
-//                .setMinHeight(25)
-//                .add(new Paragraph()
-//                        .add(new Text("Motif : ").setBold().setFontSize(9))
-//                        .add(new Text(couperTexte(recu.getMotif(), 95)).setFontSize(9))));
-
         infoTable.addCell(new Cell()
                 .setBorder(Border.NO_BORDER)
                 .setBorderBottom(new SolidBorder(ColorConstants.BLACK, 0.5f))
@@ -323,9 +298,7 @@ public class RecuPdfService {
                 .setMinHeight(25)
                 .add(new Paragraph()
                         .add(new Text("Motif : ").setBold().setFontSize(9))
-                        .add(new Text(recu.getMotif() != null ? recu.getMotif() : "").setFontSize(9))
-                )
-        );
+                        .add(new Text(recu.getMotif() != null ? recu.getMotif() : "").setFontSize(9))));
 
         // Ligne récapitulatif montants
         Table montantsRow = new Table(UnitValue.createPercentArray(new float[]{1, 1, 1}))
@@ -363,7 +336,7 @@ public class RecuPdfService {
 
         document.add(sigTable);
 
-        // Utilisateur créateur
+        // ── Utilisateur créateur ──
         if (recu.getUtilisateur() != null) {
             String userEmail = recu.getUtilisateur().getEmail();
             String userName = utilisateurRepository.findByEmail(userEmail)
@@ -452,5 +425,4 @@ public class RecuPdfService {
         return centainesEnLettres(m) + "-milliard" + (m > 1 ? "s" : "")
                 + (r > 0 ? "-" + centainesEnLettres(r) : "");
     }
-
 }

@@ -159,12 +159,17 @@ public class RecuService {
     // =========================
     // MAPPER UTILISATEUR
     // =========================
-    private UtilisateurDto mapUtilisateur(Utilisateur user) {
 
+    private UtilisateurDto mapUtilisateur(Utilisateur user) {
         UtilisateurDto dto = new UtilisateurDto();
         dto.setId(user.getId());
         dto.setEmail(user.getEmail());
         dto.setRole(user.getRole());
+        dto.setNom(user.getNom());           // ✅ ajout
+        dto.setPrenom(user.getPrenom());     // ✅ ajout
+        dto.setNumeroTelephone(user.getNumeroTelephone()); // ✅ ajout
         return dto;
     }
+
+
 }
